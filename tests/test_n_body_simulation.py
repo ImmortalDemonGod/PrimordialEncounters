@@ -19,10 +19,6 @@ except ImportError:
 class TestNBodySimulation(unittest.TestCase):
     """Test cases for the NBodySimulation class."""
 
-    def setUp(self):
-        """Set up test fixtures."""
-        pass
-
     @unittest.skipIf(not NBODY_AVAILABLE, "NBodySimulation module not available")
     def test_initialization(self):
         """Test that the NBodySimulation class can be initialized."""
@@ -42,10 +38,6 @@ class TestNBodySimulation(unittest.TestCase):
         self.assertTrue(os.path.isdir(tests_dir), "tests directory not found")
         self.assertTrue(os.path.isdir(examples_dir), "examples directory not found")
         self.assertTrue(os.path.isdir(data_dir), "data directory not found")
-
-    def tearDown(self):
-        """Tear down test fixtures."""
-        pass
 
 if __name__ == '__main__':
     unittest.main()
