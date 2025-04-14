@@ -10,15 +10,10 @@ This example shows how to:
 
 import sys
 import os
-import numpy as np
-import matplotlib.pyplot as plt
 
 # Add the src directory to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from src.n_body_simulation import NBodySimulation
-from src.analytic_impulse import AnalyticImpulse
-from src.residual_analysis import ResidualAnalysis
 
 def run_single_flyby_example():
     """Run a simple example of a PBH flyby."""
@@ -30,7 +25,7 @@ def run_single_flyby_example():
     approach_angle = 0.5  # radians
     pbh_velocity = 250.0  # km/s
     
-    print(f"PBH parameters:")
+    print("PBH parameters:")
     print(f"  Mass: {pbh_mass} solar masses")
     print(f"  Impact parameter: {impact_parameter} AU")
     print(f"  Approach angle: {approach_angle} radians")
