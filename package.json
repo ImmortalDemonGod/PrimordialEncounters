@@ -1,0 +1,25 @@
+{
+  "name": "primordialencounters",
+  "version": "1",
+  "description": "A comprehensive simulation and analysis framework for detecting primordial black hole (PBH) flybys through Solar System ephemerides. This repository implements N-body simulations, analytic impulse approximations, ensemble detection rate estimates, and parameter recovery techniques to replicate and extend the methods detailed in \"Close Encounters of the Primordial Kind\" (arXiv:2312.17217v3).",
+  "author": "ImmortalDemonGod",
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/dev.js",
+    "list": "node scripts/dev.js list",
+    "generate": "node scripts/dev.js generate",
+    "parse-prd": "node scripts/dev.js parse-prd"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "chalk": "^5.3.0",
+    "commander": "^11.1.0",
+    "dotenv": "^16.3.1",
+    "openai": "^4.86.1",
+    "figlet": "^1.7.0",
+    "boxen": "^7.1.1",
+    "gradient-string": "^2.0.2",
+    "cli-table3": "^0.6.3",
+    "ora": "^7.0.1"
+  }
+}
