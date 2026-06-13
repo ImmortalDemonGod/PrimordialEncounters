@@ -1,3 +1,4 @@
+import ast
 import numpy as np
 import os
 
@@ -203,7 +204,10 @@ def load_residuals(filepath):
     try:
         # Assuming NPZ format for now
         if filepath.lower().endswith('.npz'):
-            data = np.load(filepath, allow_pickle=True) # Allow pickle for metadata potentially
+            # allow_pickle=False: refuse arbitrary object deserialization. A crafted .npz
+            # can embed a pickle payload that executes code on load; the residual arrays and
+            # the metadata string below do not need pickle, so disabling it is safe here.
+            data = np.load(filepath, allow_pickle=False)
             times = data.get('times_years')
             pos_residuals = data.get('position_residuals_au')
             vel_residuals = data.get('velocity_residuals_au_day')
@@ -212,7 +216,11 @@ def load_residuals(filepath):
                  try:
                      # Attempt to parse the metadata string back into a dict
                      metadata_str = str(data['metadata'].item()) # Extract string from array
-                     metadata = eval(metadata_str) # Use eval carefully! Assumes trusted source.
+                     # ast.literal_eval parses Python literals only (dict/list/str/num/etc.)
+                     # and never executes code, unlike eval(). A malicious metadata string
+                     # therefore cannot run arbitrary code; non-literal input raises and is
+                     # caught below, degrading to the raw string.
+                     metadata = ast.literal_eval(metadata_str)
                  except Exception as meta_e:
                      print(f"Warning: Could not parse metadata from file: {meta_e}")
                      metadata = {'raw_metadata': str(data['metadata'])} # Store raw string
