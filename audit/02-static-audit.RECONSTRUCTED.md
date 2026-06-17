@@ -1,0 +1,1029 @@
+# 02 — Static Audit (RECONSTRUCTED mid-run)
+
+> **Durable snapshot reconstructed from on-disk agent outputs at 2026-06-17T16:30:22.336Z**, by replaying the orchestrator's deterministic aggregation. Reflects the **round-2 survivor set** (the last completed adversarial round). The live process is finishing round 3; if it checkpoints, the official `02-static-audit.md` supersedes this file. Counts validated against the run log (46→45→49→49).
+
+## Surviving findings (49) — each upheld by an independent batched falsifier
+
+| ID | Sev | Class | Location | Title |
+| --- | --- | --- | --- | --- |
+| F004 | critical | bug | `src/simulation_runner.py:84` | PBH mass key mismatch: simulation reads pbh_params['mass'] but sampler produces 'mass_msun' (KeyError aborts every perturbed run) |
+| F015 | critical | bug | `src/ensemble_runner.py:277` | run_ensemble() has no return statement — always returns None |
+| F016 | critical | bug | `src/simulation_runner.py:84` | PBH parameter key mismatch between parameter_sampler and simulation_runner causes KeyError in every perturbed run |
+| F017 | critical | bug | `src/parameter_sampler.py:11` | KM_S_TO_AU_DAY conversion constant is wrong by a factor of ~86 |
+| F038 | critical | bug | `src/ensemble_runner.py:64` | Nested multiprocessing: ensemble pool workers attempt to spawn a second Pool — AssertionError on every perturbed run |
+| F001 | high | security | `src/residual_analysis.py:215` | eval() executed on metadata string loaded from .npz file (arbitrary code execution) |
+| F003 | high | bug | `src/parameter_sampler.py:11` | km/s -> AU/day conversion constant is wrong by ~86x |
+| F005 | high | bug | `src/simulation_runner.py:91` | Impact parameter key mismatch: 'impact_param' default silently discards sampled 'impact_param_au' |
+| F006 | high | bug | `src/simulation_runner.py:104` | Hardcoded kick target 'body_3' does not exist for the configured body set |
+| F007 | high | bug | `src/ensemble_runner.py:144` | run_ensemble has no return statement; returns None while caller treats it as a list |
+| F010 | high | code-intent-mismatch | `src/simulation_runner.py:91` | PBH initial position is a placeholder; t_encounter and proper geometry are ignored |
+| F018 | high | bug | `src/analytic_impulse.py:104` | Analytic impulse example PBH velocity is ~820× too large — comment and hardcoded value both wrong |
+| F019 | high | bug | `src/n_body_simulation.py:4` | n_body_simulation.py uses bare absolute import of analytic_impulse — fails when imported as package |
+| F020 | high | code-intent-mismatch | `src/simulation_runner.py:90` | PBH initial position calculation is a placeholder — perturbed simulations never run a physical encounter |
+| F021 | high | design-defect | `src/simulation_runner.py:104` | Target body for analytic kick hardcoded as 'body_3' — only works for a specific 4-body setup |
+| F022 | high | code-intent-mismatch | `src/residual_analysis.py:233` | q_fom figure-of-merit (paper Eq. 17) is entirely unimplemented — core detection metric missing |
+| F023 | high | doc-drift | `README.md:128` | README project structure lists wrong module names not present in the repository |
+| F024 | high | doc-drift | `README.md:98` | README Usage section references non-existent CLI scripts with flags that match no implemented interface |
+| F025 | high | code-intent-mismatch | `examples/single_flyby_example.py:34` | examples/single_flyby_example.py is a non-functional stub — prints placeholder text instead of running simulation |
+| F037 | high | design-defect | `src/parameter_sampler.py:85` | parameter_sampler.generate_pbh_sample does not sample PBH initial-position angles — encounter geometry is incomplete |
+| F039 | high | bug | `src/ensemble_runner.py:6` | tqdm imported unconditionally at module level but absent from requirements.txt — ModuleNotFoundError on any fresh install |
+| F040 | high | bug | `src/simulation_runner.py:94` | PBH added to N-body simulation with full gravitational mass AND analytic impulse kick also applied — perturbation double-counted |
+| F041 | high | bug | `src/simulation_runner.py:126` | Perturbed simulation pre-encounter state (t_start) permanently lost when output arrays are reallocated after kick |
+| F046 | high | bug | `src/ensemble_runner.py:367` | calculate_detection_rates inflates total_completed denominator with unclassifiable members, biasing detection rate toward zero |
+| F002 | medium | security | `src/residual_analysis.py:206` | np.load called with allow_pickle=True on user-supplied path (unsafe deserialization) |
+| F008 | medium | bug | `src/n_body_simulation.py:4` | Absolute import 'from analytic_impulse import ...' breaks when n_body_simulation is imported as a package module |
+| F009 | medium | bug | `src/n_body_simulation.py:97` | add_solar_system swallows exceptions and continues with a possibly empty simulation |
+| F011 | medium | bug | `src/analytic_impulse.py:66` | Velocity kick points away from the PBH (sign error in kick direction) |
+| F012 | medium | bug | `src/ensemble_runner.py:136` | JSON serialization of numpy values in summaries/results fails, breaking checkpointing and final output |
+| F026 | medium | security | `src/residual_analysis.py:215` | eval() used to deserialize untrusted metadata from .npz files — code injection risk |
+| F027 | medium | bug | `src/residual_analysis.py:395` | residual_analysis.py __main__ block: stats calculation is inside the failure (else) branch — dead code on success |
+| F028 | medium | design-defect | `src/visualization.py:76` | visualization.py calls plt.show() unconditionally in every plot function — blocks headless batch execution |
+| F029 | medium | design-defect | `setup.py:14` | setup.py declares pytest and pytest-cov in install_requires — test tools become mandatory runtime dependencies |
+| F030 | medium | design-defect | `setup.py:9` | setup.py find_packages() will not find src/ — package name 'primordial_encounters' matches no directory |
+| F031 | medium | doc-drift | `README.md:53` | Parameter recovery feature documented in README but no module exists |
+| F032 | medium | doc-drift | `README.md:58` | Spectral analysis feature documented in README and pseudocode but no module exists |
+| F033 | medium | doc-drift | `README.md:159` | README references MIT LICENSE file that does not exist |
+| F034 | medium | code-intent-mismatch | `tests/test_n_body_simulation.py:23` | test_initialization is a bare pass — no physics correctness tests exist anywhere in the test suite |
+| F042 | medium | bug | `src/residual_analysis.py:98` | compute_residuals uses np.interp which silently clips to boundary values when time ranges do not fully overlap — produces wrong residuals without warning |
+| F047 | medium | bug | `src/visualization.py:137` | plot_residual_timeseries uses residuals-array-local indices to index a labels list documented as indexed by original particle indices, mislabeling every plotted line |
+| F048 | medium | bug | `src/ensemble_runner.py:316` | is_detected computes norm of per-dimension temporal peak values, overestimating true peak 3D displacement and producing false positive detections |
+| F049 | medium | design-defect | `src/` | src/ directory has no __init__.py; namespace-package status prevents pip-installable package even if directory name or find_packages() call is corrected |
+| F013 | low | design-defect | `src/simulation_runner.py:151` | Particle-count resize in the integration loop is lossy and uses inconsistent initial allocation |
+| F014 | low | doc-drift | `examples/single_flyby_example.py:34` | Stub example advertised as runnable single-flyby demo performs no simulation |
+| F035 | low | other | `src/parameter_sampler.py:2` | parameter_sampler.py imports scipy.stats but never calls any scipy function |
+| F036 | low | doc-drift | `src/residual_analysis.py:6` | FORMAT_CSV constant is defined but save_residuals always returns False for CSV format |
+| F043 | low | bug | `src/simulation_runner.py:38` | dt_rebound set to None when dt_years is falsy; integration loop unconditionally dereferences it causing TypeError |
+| F045 | low | design-defect | `src/visualization.py:510` | visualization.py and synthetic_data.py __main__ blocks use bare (non-relative) imports incompatible with package-mode execution |
+| F044 | info | doc-drift | `src/n_body_simulation.py:201` | apply_analytic_kick docstring states simulation must be at t=0 but implementation uses current simulation time — misleading contract |
+
+### F004 — PBH mass key mismatch: simulation reads pbh_params['mass'] but sampler produces 'mass_msun' (KeyError aborts every perturbed run)
+
+- **Severity / class:** critical / bug
+- **Location:** `src/simulation_runner.py:84`
+- **Evidence:** run_single_simulation does `pbh_mass = pbh_params['mass']`, but parameter_sampler.generate_pbh_sample (parameter_sampler.py:112-117) emits keys 'mass_msun','impact_param_au','velocity_au_day','t_encounter_years'. ensemble_runner passes pbh_samples[i] straight through (ensemble_runner.py:72, run_parallel_simulations -> run_single_simulation). `pbh_params['mass']` therefore raises KeyError, caught by the broad except at simulation_runner.py:180 returning (None,None,None); ensemble_runner.py:75 then raises RuntimeError. The end-to-end ensemble can never produce a perturbed result.
+- **Violates intent:** Directly breaks intent (1) and (3): N-body PBH-perturbed runs and Monte-Carlo detection ensembles cannot complete a single perturbed member.
+- **Falsifier (upheld):** simulation_runner.py:84 `pbh_mass = pbh_params['mass']`, but generate_pbh_sample (parameter_sampler.py:112-117) emits 'mass_msun' (not 'mass'). ensemble_runner.py:72 passes pbh_params (the sample) straight to run_parallel_simulations -> run_single/perturbed run. Subscript with absent 'mass' raises KeyError, caught by broad except at simulation_runner.py:180-184 returning (None,None,None); ensemble_runner.py:75-76 then raises RuntimeError. Perturbed result cannot be produced. Confirmed (note: line 86 already uses the correct 'velocity_au_day' key, but line 84 fails first).
+
+### F015 — run_ensemble() has no return statement — always returns None
+
+- **Severity / class:** critical / bug
+- **Location:** `src/ensemble_runner.py:277`
+- **Evidence:** The function body ends at line 277 with `print(f"\nEnsemble run finished. {len(results)} members processed.")` and no `return results` statement. The docstring at line 173 states 'Returns: list: A list of summary dictionaries, one for each completed member.' All callers receive None. In the __main__ block at line 460, `ensemble_results = run_ensemble(...)` assigns None, so the immediately following `sum(1 for r in ensemble_results if ...)` at line 472 raises TypeError: 'NoneType' object is not iterable.
+- **Violates intent:** Intent (3): run large Monte Carlo ensembles to estimate detection rates. The ensemble runner is the top-level orchestrator; returning None instead of results silently destroys all computed outputs.
+- **Falsifier (upheld):** run_ensemble's body ends at line 277 with a print and no `return results`, despite the docstring (line 171-172) promising a list. In __main__ line 460 ensemble_results = run_ensemble(...) is therefore None, and line 472 `sum(1 for r in ensemble_results ...)` raises TypeError: 'NoneType' object is not iterable. Confirmed critical.
+
+### F016 — PBH parameter key mismatch between parameter_sampler and simulation_runner causes KeyError in every perturbed run
+
+- **Severity / class:** critical / bug
+- **Location:** `src/simulation_runner.py:84`
+- **Evidence:** parameter_sampler.py:112 produces dicts with key 'mass_msun'. simulation_runner.py:84 accesses `pbh_params['mass']` — missing key raises KeyError. Additionally simulation_runner.py:91 calls `pbh_params.get('impact_param', 100.0)` while parameter_sampler.py:114 uses key 'impact_param_au'. ensemble_runner.py:72 passes the sampler output directly to run_parallel_simulations with no key mapping, so every perturbed ensemble member crashes before any simulation runs.
+- **Violates intent:** Intent (1) and (3): N-body simulations of PBH encounters and Monte Carlo ensembles are completely non-functional for any call path that goes parameter_sampler → ensemble_runner → simulation_runner.
+- **Falsifier (upheld):** parameter_sampler.py:113 emits key 'mass_msun' but simulation_runner.py:84 reads pbh_params['mass'] → KeyError. ensemble_runner.py:72 passes the raw sampler dict to run_parallel_simulations with no key remapping, so every perturbed member fails (KeyError caught at simulation_runner.py:180 returns None, then ensemble_runner.py:75-76 raises RuntimeError). Line 91 also uses .get('impact_param', 100.0) vs sampler's 'impact_param_au' (silent fallback). Confirmed.
+
+### F017 — KM_S_TO_AU_DAY conversion constant is wrong by a factor of ~86
+
+- **Severity / class:** critical / bug
+- **Location:** `src/parameter_sampler.py:11`
+- **Evidence:** Line 11: `KM_S_TO_AU_DAY = 1.0 / 1.731e6 * 86400.0` evaluates to ≈0.04991 AU/day per km/s. The correct conversion using 1 AU = 1.496e8 km, 1 day = 86400 s is 86400/1.496e8 ≈ 5.775e-4 AU/day per km/s. The code's divisor (1.731e6) is ~86× smaller than the correct value (1.496e8), making every sampled PBH velocity ~86× too large. At the default sigma_v=200 km/s, the 1-sigma speed becomes ~9.98 AU/day (≈1.73×10⁴ km/s, about 6% of c) instead of the physically expected ~0.115 AU/day (~200 km/s).
+- **Violates intent:** Intent (3): Monte Carlo detection rate estimates depend on physically realistic velocity sampling. Velocities 86× too large invalidate all sampled encounter geometries and resulting residual statistics.
+- **Falsifier (upheld):** parameter_sampler.py:11 `KM_S_TO_AU_DAY = 1.0 / 1.731e6 * 86400.0` = 86400/1.731e6 ≈ 0.04991 AU/day per km/s. Correct value is 86400/1.496e8 ≈ 5.775e-4. The comment on the same line even cites '1 AU = 1.496e8 km' yet the divisor used is 1.731e6, which is 1.496e8/1.731e6 ≈ 86.4× smaller, inflating sampled velocities ~86×. Confirmed at anchor.
+
+### F038 — Nested multiprocessing: ensemble pool workers attempt to spawn a second Pool — AssertionError on every perturbed run
+
+- **Severity / class:** critical / bug
+- **Location:** `src/ensemble_runner.py:64`
+- **Evidence:** run_ensemble (line 238) submits run_ensemble_member tasks to a multiprocessing.Pool; pool workers run as daemon processes. run_ensemble_member line 64 calls simulation_runner.run_parallel_simulations, which creates another multiprocessing.Pool at simulation_runner.py:228. Python raises 'AssertionError: daemonic processes are not allowed to have children' whenever a daemon process attempts to spawn a Pool. This makes every perturbed ensemble member fail immediately, rendering the entire ensemble pipeline non-functional.
+- **Violates intent:** The project intends to run large Monte Carlo ensemble simulations (millions of flyby samples); nested pool creation aborts every perturbed member before any N-body work begins.
+- **Falsifier (upheld):** run_ensemble submits run_ensemble_member to multiprocessing.Pool (ensemble_runner.py:238, imap_unordered at 241). Pool workers are daemonic by default. run_ensemble_member:64 calls simulation_runner.run_parallel_simulations always passing pbh_params (line 72), so run_parallel_simulations always takes the parallel branch and constructs a second multiprocessing.Pool (simulation_runner.py:228). A daemon process spawning a Pool raises 'AssertionError: daemonic processes are not allowed to have children'. The try/except in run_ensemble_member (line 61) catches it and marks the member 'failed', so every member fails — pipeline non-functional. Critical severity justified.
+
+### F001 — eval() executed on metadata string loaded from .npz file (arbitrary code execution)
+
+- **Severity / class:** high / security
+- **Location:** `src/residual_analysis.py:215`
+- **Evidence:** load_residuals does `metadata_str = str(data['metadata'].item())` then `metadata = eval(metadata_str)` with the in-code comment `# Use eval carefully! Assumes trusted source.`. The metadata is the stringified dict written by save_residuals (line 148, `np.array([str(meta_str_dict)])`). Any .npz file fed to load_residuals can carry an arbitrary Python expression in its 'metadata' array that eval will execute, giving code execution from a data file.
+- **Violates intent:** Violates intent (4) 'generate synthetic observations ... for parameter recovery testing' and the load/save round-trip of residual data — loading a results artifact must not execute untrusted code.
+- **Falsifier (upheld):** residual_analysis.py:215 `metadata = eval(metadata_str)` with comment '# Use eval carefully! Assumes trusted source.', where metadata_str derives from data['metadata'].item() (line 214) loaded from an arbitrary .npz. save_residuals writes the stringified dict at line 148 (np.array([str(meta_str_dict)])). A crafted .npz can place an arbitrary Python expression in 'metadata' that eval executes — code execution from a data file. Confirmed.
+
+### F003 — km/s -> AU/day conversion constant is wrong by ~86x
+
+- **Severity / class:** high / bug
+- **Location:** `src/parameter_sampler.py:11`
+- **Evidence:** `KM_S_TO_AU_DAY = 1.0 / 1.731e6 * 86400.0` evaluates to ~0.0499. Correct value: 1 km/s = 86400 s/day / 1.496e8 km/AU = 5.78e-4 AU/day. The comment itself states '1 AU = 1.496e8 km' but the code uses 1.731e6 in the denominator, yielding velocities ~86x too large. sample_velocity (lines 65-69) multiplies all sampled component speeds by this constant, so every sampled PBH velocity is mis-scaled.
+- **Violates intent:** Violates intent (3) 'run large Monte Carlo ensembles to estimate detection rates' — encounter velocities feed directly into the impulse kick (Δv ∝ 1/v_rel), so detection-rate estimates are systematically corrupted.
+- **Falsifier (upheld):** parameter_sampler.py:11 `KM_S_TO_AU_DAY = 1.0 / 1.731e6 * 86400.0` = 86400/1.731e6 ≈ 0.04991. Correct 1 km/s = 86400 / 1.496e8 ≈ 5.775e-4 AU/day; ratio ≈ 86.4x too large. Comment states '1 AU = 1.496e8 km' yet code uses 1.731e6. sample_velocity (lines 65-67) multiplies all component speeds by this constant, mis-scaling every sampled velocity. Confirmed.
+
+### F005 — Impact parameter key mismatch: 'impact_param' default silently discards sampled 'impact_param_au'
+
+- **Severity / class:** high / bug
+- **Location:** `src/simulation_runner.py:91`
+- **Evidence:** `pbh_initial_pos = np.array([-1000.0, pbh_params.get('impact_param', 100.0), 0.0])`. The sampler produces 'impact_param_au' (parameter_sampler.py:114), never 'impact_param', so .get always returns the hardcoded default 100.0 AU. Every PBH is placed at the same y-offset regardless of the sampled impact parameter.
+- **Violates intent:** Violates intent (3): detection rate as a function of PBH parameters is meaningless if the sampled impact parameter never reaches the simulation.
+- **Falsifier (upheld):** simulation_runner.py:91 `pbh_initial_pos = np.array([-1000.0, pbh_params.get('impact_param', 100.0), 0.0])`. The sampler emits 'impact_param_au' (parameter_sampler.py:114), never 'impact_param', so .get always returns the hardcoded 100.0 default and the sampled impact parameter is discarded. (In practice the line 84 KeyError aborts before reaching here, but the key mismatch itself is real.) Confirmed.
+
+### F006 — Hardcoded kick target 'body_3' does not exist for the configured body set
+
+- **Severity / class:** high / bug
+- **Location:** `src/simulation_runner.py:104`
+- **Evidence:** `target_body_label = "body_3"` is hardcoded, but labels are built as `body_{i}` with body_0 renamed 'Sun' (simulation_runner.py:48-50). For the example/ensemble setup with masses of length 3 (Sun, Body1, Body2) the labels are ['Sun','body_1','body_2'] — there is no 'body_3'. apply_analytic_kick then fails to find the target (n_body_simulation.py:281-285) and returns False, so no kick is applied.
+- **Violates intent:** Violates intent (1)/(2): the PBH impulse is never applied to the intended body, so residuals reflect no perturbation.
+- **Falsifier (upheld):** simulation_runner.py:104 `target_body_label = "body_3"` is hardcoded. Labels are built as body_{i} with body_0 renamed 'Sun' (simulation_runner.py:48-50), so a 3-mass setup yields ['Sun','body_1','body_2'] — no 'body_3'. apply_analytic_kick's target search (n_body_simulation.py:276-285) finds no match and returns False at line 285, so no kick is applied. Confirmed.
+
+### F007 — run_ensemble has no return statement; returns None while caller treats it as a list
+
+- **Severity / class:** high / bug
+- **Location:** `src/ensemble_runner.py:144`
+- **Evidence:** run_ensemble's docstring states 'Returns: list: A list of summary dictionaries', but the function body ends at the print on ensemble_runner.py:277 with no `return`, so it returns None. The __main__ block (ensemble_runner.py:460) assigns `ensemble_results = run_ensemble(...)` then iterates `sum(1 for r in ensemble_results ...)` at line 472, which raises TypeError ('NoneType' is not iterable).
+- **Violates intent:** Violates intent (3): the ensemble driver cannot hand its results to detection-rate analysis; documented return contract is broken.
+- **Falsifier (upheld):** run_ensemble (def at ensemble_runner.py:144) ends with the print at line 277 and the next def begins at line 280/282 — no return statement, so it returns None despite the docstring claiming it returns a list. __main__ assigns ensemble_results = run_ensemble(...) (line 460) then at line 472 does `sum(1 for r in ensemble_results ...)`, iterating None → TypeError. Confirmed.
+
+### F010 — PBH initial position is a placeholder; t_encounter and proper geometry are ignored
+
+- **Severity / class:** high / code-intent-mismatch
+- **Location:** `src/simulation_runner.py:91`
+- **Evidence:** Code comments admit the stub: `# Placeholder: Use a dummy position far away initially` and `# TODO: Calculate initial PBH position based on encounter parameters relative to target`. pbh_initial_pos is fixed at [-1000, <default 100>, 0] and the sampled 't_encounter_years' (parameter_sampler.py:116) is never used to place the PBH; apply_analytic_kick computes t_ca purely from this placeholder geometry (n_body_simulation.py:234-244).
+- **Violates intent:** Violates intent (1) 'N-body simulations of PBH encounters using impulse-approximation shortcuts' and the stated Tran et al. methodology — encounter timing/geometry is not actually realized.
+- **Falsifier (upheld):** simulation_runner.py:89-91 contains the literal stub comments 'Placeholder: Use a dummy position far away initially' and the TODO, with pbh_initial_pos = np.array([-1000.0, pbh_params.get('impact_param', 100.0), 0.0]). t_encounter_years from the sampler is never referenced in run_single_simulation. apply_analytic_kick (n_body_simulation.py:234-240) feeds this placeholder pbh_pos into calculate_velocity_kick, so t_ca derives purely from the placeholder geometry.
+
+### F018 — Analytic impulse example PBH velocity is ~820× too large — comment and hardcoded value both wrong
+
+- **Severity / class:** high / bug
+- **Location:** `src/analytic_impulse.py:104`
+- **Evidence:** Lines 104-105: comment says '200 km/s -> 94.8 AU/day -> … ~= 5510 AU/(yr/2pi)'; hardcoded velocity is `[5510.0, 0, 0]`. Correct conversion: 200 km/s × 86400 s/day / 1.496e8 km/AU ≈ 0.1155 AU/day = 0.1155 × VELOCITY_DAY_TO_REBOUND ≈ 6.71 AU/(yr/2π). The hardcoded 5510 AU/(yr/2π) corresponds to ≈94.8 AU/day ≈ 164,000 km/s ≈ 0.55c — highly relativistic, making the impulse approximation (which assumes v_rel ≪ c) physically invalid for this example.
+- **Violates intent:** Intent (2): impulse-approximation shortcuts require physically realistic relative velocities; using 0.55c violates the non-relativistic assumption of the analytic formula.
+- **Falsifier (upheld):** analytic_impulse.py:104-105: comment states '200 km/s -> 94.8 AU/day' and hardcodes `pbh_velocity_example = np.array([5510.0, 0, 0])`. Correct 200 km/s = 200*86400/1.496e8 ≈ 0.1155 AU/day (≈6.71 AU/(yr/2π) via VELOCITY_DAY_TO_REBOUND=365.25/2π). The 94.8 AU/day / 5510 AU/(yr/2π) values are ~820× too large and imply ~0.55c, invalidating the impulse approximation. Confirmed at anchor.
+
+### F019 — n_body_simulation.py uses bare absolute import of analytic_impulse — fails when imported as package
+
+- **Severity / class:** high / bug
+- **Location:** `src/n_body_simulation.py:4`
+- **Evidence:** Line 4: `from analytic_impulse import calculate_velocity_kick, G as analytic_G` — unconditional absolute import with no try/except fallback. In Python 3, this resolves as a top-level module lookup. When the module is imported via `from src.n_body_simulation import NBodySimulation` (as in tests/test_n_body_simulation.py:13), the project root is in sys.path but src/ is not, so `analytic_impulse` is not findable and raises ModuleNotFoundError. Other modules (simulation_runner.py:4-18, ensemble_runner.py:10-19, synthetic_data.py:6-9) all use try/except relative-then-bare import patterns to handle this; n_body_simulation.py does not.
+- **Violates intent:** Intent (1): the NBodySimulation class is the core simulation engine; an import failure at module load time blocks all N-body simulation.
+- **Falsifier (upheld):** n_body_simulation.py:4 is a bare unconditional absolute import `from analytic_impulse import calculate_velocity_kick, G as analytic_G` with no relative or try/except fallback. tests/test_n_body_simulation.py:13 imports `from src.n_body_simulation import NBodySimulation`; conftest.py:8 and test:9 add only the project root ('..') to sys.path, not src/, so analytic_impulse is unresolvable → ModuleNotFoundError (caught by test try/except at lines 12-16, setting NBODY_AVAILABLE=False). Other modules avoid this: ensemble_runner.py:9-19 and synthetic_data.py:5-9 use try/except relative-then-bare; simulation_runner.py:4-5 uses package-relative `from . import`. The finding's wording about simulation_runner using try/except is slightly imprecise (it uses pure relative imports), but the core claim — n_body_simulation.py's bare import breaks package import while siblings handle it — is confirmed.
+
+### F020 — PBH initial position calculation is a placeholder — perturbed simulations never run a physical encounter
+
+- **Severity / class:** high / code-intent-mismatch
+- **Location:** `src/simulation_runner.py:90`
+- **Evidence:** Lines 88-91: `# TODO: Calculate initial PBH position based on encounter parameters relative to target` / `pbh_initial_pos = np.array([-1000.0, pbh_params.get('impact_param', 100.0), 0.0]) # Needs proper calculation!`. The y-coordinate is set to the impact parameter scalar (a distance, not a position component). The pseudocode (docs/pseudocode.md:206-228) defines CreatePBHBody() using SphericalToCartesian(r0, theta0, phi0) and VelocityVectorFromAngles(). No such calculation exists; the PBH is always placed at (-1000, b, 0) regardless of encounter geometry.
+- **Violates intent:** Intent (1): N-body simulations of PBH encounters require a physically computed initial PBH position from encounter parameters (r0, theta0, phi0, alpha, beta per paper arXiv:2312.17217v3 Section III).
+- **Falsifier (upheld):** simulation_runner.py:88-91 contains `# TODO: Calculate initial PBH position based on encounter parameters relative to target` and `pbh_initial_pos = np.array([-1000.0, pbh_params.get('impact_param', 100.0), 0.0]) # Needs proper calculation!`. The y-component is set directly to the impact-parameter scalar, with no spherical-to-Cartesian geometry computation; PBH is fixed at (-1000, b, 0) regardless of encounter angles. Confirmed placeholder at anchor.
+
+### F021 — Target body for analytic kick hardcoded as 'body_3' — only works for a specific 4-body setup
+
+- **Severity / class:** high / design-defect
+- **Location:** `src/simulation_runner.py:104`
+- **Evidence:** Line 104: `target_body_label = "body_3" # Assuming Earth is body 3 after Sun, Merc, Venus`. Labels are assigned at lines 48-50 as `[f"body_{i}" for i in range(len(masses))]`. If fewer than 4 bodies are used (e.g., the 3-body example in __main__), 'body_3' does not exist and apply_analytic_kick() returns False silently. No mechanism is provided to specify the target body via pbh_params or arguments.
+- **Violates intent:** Intent (1): the Solar System simulation should apply kicks to the correct bodies. Hardcoding 'body_3' prevents generalization to arbitrary Solar System configurations.
+- **Falsifier (upheld):** simulation_runner.py:104 `target_body_label = "body_3" # Assuming Earth is body 3 after Sun, Merc, Venus`. Labels assigned at line 48 as `[f"body_{i}" for i in range(len(masses))]`. With <4 bodies, 'body_3' does not exist; no argument/pbh_params mechanism to override the target. Confirmed hardcoded at anchor.
+
+### F022 — q_fom figure-of-merit (paper Eq. 17) is entirely unimplemented — core detection metric missing
+
+- **Severity / class:** high / code-intent-mismatch
+- **Location:** `src/residual_analysis.py:233`
+- **Evidence:** Lines 233-240 show commented-out stubs only: `# def calculate_observables(positions, velocities): / #     pass` and `# def calculate_q_fom(residuals_observables): / #     pass`. README.md:53 Feature #4 states 'Evaluate figure-of-merit q_fom for detection'. docs/pseudocode.md:315-338 provides a complete ComputeQFOM() specification based on paper Eq. (17). ensemble_runner.py is_detected() and calculate_detection_rates() use peak position residual as a crude proxy threshold rather than q_fom. The actual detection criterion from Tran et al. is absent.
+- **Violates intent:** Intent (3): Monte Carlo detection rate estimation requires q_fom (Eq. 17 of arXiv:2312.17217v3) as the detection statistic; the substitute threshold on raw peak AU residual is not the paper's methodology.
+- **Falsifier (upheld):** residual_analysis.py:233-240 contains only commented-out stubs: `# def calculate_observables(...)` / `#     pass` and `# def calculate_q_fom(residuals_observables): ... #     pass`. q_fom is entirely unimplemented; only RMS/peak helpers exist (calculate_rms at line 245). Core claim that the paper Eq.17 figure-of-merit detection metric is absent is confirmed at the anchor.
+
+### F023 — README project structure lists wrong module names not present in the repository
+
+- **Severity / class:** high / doc-drift
+- **Location:** `README.md:128`
+- **Evidence:** README.md:128-131 shows: `src/nbody.py`, `src/pbhsampler.py`, `src/residuals.py`, `src/parameter_recovery.py`. Actual source files are `src/n_body_simulation.py`, `src/parameter_sampler.py`, `src/residual_analysis.py`. No `parameter_recovery.py` exists. README also shows `scripts/single_flyby.py`, `scripts/ensemble_flyby.py`, `scripts/param_recovery.py` (lines 134-137) and `examples/SingleFlyby.ipynb` (line 139) — none of these exist in the repository.
+- **Violates intent:** The project intends to be a usable framework for researchers; a README directing users to non-existent files and scripts defeats first-contact usability.
+- **Falsifier (upheld):** README.md:128-132 lists `src/nbody.py`, `src/pbhsampler.py`, `src/residuals.py`, `src/parameter_recovery.py`; lines 134-136 list `scripts/single_flyby.py`, `scripts/ensemble_flyby.py`, `scripts/param_recovery.py`; line 138 lists `examples/SingleFlyby.ipynb`. None match the actual source files (n_body_simulation.py, parameter_sampler.py, residual_analysis.py) and no scripts/ dir or .ipynb exist per the audit inventory. Confirmed at anchor.
+
+### F024 — README Usage section references non-existent CLI scripts with flags that match no implemented interface
+
+- **Severity / class:** high / doc-drift
+- **Location:** `README.md:98`
+- **Evidence:** README.md:98-113 specifies three commands: `python scripts/single_flyby.py --mass 1e-9 --r0 450 --alpha 0.004 --beta 3.1415`, `python scripts/ensemble_flyby.py --n 100000 --mass-base 1e-6`, `python scripts/param_recovery.py --input residual_data.npz`. No `scripts/` directory exists; the only runnable example is `examples/single_flyby_example.py` which itself is a stub (line 34: 'This is a placeholder example'). The flags `--r0`, `--alpha`, `--beta` correspond to encounter-geometry parameters that are not implemented in any module.
+- **Violates intent:** The project claims to enable researchers to run simulations; the documented interface is entirely fictional.
+- **Falsifier (upheld):** README.md:98-113 specifies `python scripts/single_flyby.py --mass 1e-9 --r0 450 --alpha 0.004 --beta 3.1415`, `scripts/ensemble_flyby.py --n 100000 --mass-base 1e-6`, and `scripts/param_recovery.py --input residual_data.npz`. No scripts/ directory exists; the only example, examples/single_flyby_example.py:34, prints 'This is a placeholder example.' The --r0/--alpha/--beta geometry flags map to no implemented interface. Confirmed at anchor.
+
+### F025 — examples/single_flyby_example.py is a non-functional stub — prints placeholder text instead of running simulation
+
+- **Severity / class:** high / code-intent-mismatch
+- **Location:** `examples/single_flyby_example.py:34`
+- **Evidence:** Line 34: `print("\nThis is a placeholder example. The actual implementation will:")` — the entire function body consists of `print()` calls describing what will be done, with no imports of or calls to any simulation module (n_body_simulation, simulation_runner, analytic_impulse, etc.). README.md:115 directs users to the examples/ directory for 'a guided walkthrough'.
+- **Violates intent:** Intent (1): the example is the primary user-facing demonstration of running an N-body PBH flyby simulation.
+- **Falsifier (upheld):** examples/single_flyby_example.py:34 reads `print("\nThis is a placeholder example. The actual implementation will:")` followed by lines 35-39 enumerating future steps. The entire function (lines 18-42) only prints parameter values and placeholder text; it imports no simulation module (only sys/os at lines 11-12) and calls no n_body_simulation/simulation_runner/analytic_impulse function. It is a non-functional stub.
+
+### F037 — parameter_sampler.generate_pbh_sample does not sample PBH initial-position angles — encounter geometry is incomplete
+
+- **Severity / class:** high / design-defect
+- **Location:** `src/parameter_sampler.py:85`
+- **Evidence:** generate_pbh_sample() returns dicts with keys: 'mass_msun', 'impact_param_au', 'velocity_au_day', 't_encounter_years'. docs/pseudocode.md:201-228 specifies CreatePBHBody() requires: r0 (initial radial distance), theta0, phi0 (approach direction angles), alpha, beta (velocity orientation angles). None of these are sampled. Without initial position angles, the PBH position cannot be computed from encounter parameters (confirmed by the placeholder at simulation_runner.py:90-91).
+- **Violates intent:** Intent (1) and (3): physically meaningful N-body simulation of a PBH encounter requires fully specifying the encounter geometry in 3D; the sampler produces incomplete parameter sets.
+- **Falsifier (upheld):** generate_pbh_sample (parameter_sampler.py:85-120) returns dicts with exactly keys 'mass_msun','impact_param_au','velocity_au_day','t_encounter_years' (lines 112-117). docs/pseudocode.md:198-228 CreatePBHBody requires r0, theta0, phi0 (lines 202-203) and alpha, beta (line 204) to set the PBH's initial Cartesian position. None are sampled. simulation_runner.py:90-91 confirms the consequence: a hardcoded placeholder position with a 'Needs proper calculation!' comment. Design defect confirmed.
+
+### F039 — tqdm imported unconditionally at module level but absent from requirements.txt — ModuleNotFoundError on any fresh install
+
+- **Severity / class:** high / bug
+- **Location:** `src/ensemble_runner.py:6`
+- **Evidence:** Line 6: 'from tqdm import tqdm' is a bare unconditional top-level import with no try/except fallback. tqdm is absent from requirements.txt (which lists rebound, numpy, scipy, matplotlib, jupyter, emcee, dynesty) and from setup.py install_requires. Any environment built from the declared dependencies raises ModuleNotFoundError at import time, making ensemble_runner completely unavailable without an undocumented extra install step.
+- **Violates intent:** The project intends to run large ensemble simulations; the ensemble runner must be importable from a standard requirements-based install.
+- **Falsifier (upheld):** ensemble_runner.py:6 is `from tqdm import tqdm` — a bare unconditional top-level import (no try/except; comment '# Optional' is misleading since the import is mandatory and tqdm is used at line 241). requirements.txt lists only rebound, numpy, scipy, matplotlib, jupyter, emcee, dynesty (no tqdm). setup.py install_requires (lines 10-17) lists numpy, matplotlib, scipy, rebound, pytest, pytest-cov (no tqdm). A fresh install from declared deps raises ModuleNotFoundError on import.
+
+### F040 — PBH added to N-body simulation with full gravitational mass AND analytic impulse kick also applied — perturbation double-counted
+
+- **Severity / class:** high / bug
+- **Location:** `src/simulation_runner.py:94`
+- **Evidence:** Lines 94-99 add the PBH as a live REBOUND particle with its full mass (pbh_mass). apply_analytic_kick (line 111) then integrates the full N-body system from t_start to t_ca — during which the PBH's real gravitational mass continuously attracts all bodies — and then applies the full analytic impulse delta_v at t_ca (which represents the total integrated effect of a complete flyby from −∞ to +∞). After the kick the PBH remains in the simulation with full mass through [t_ca, t_end]. The PBH perturbation is thus counted three times: N-body on approach, the full analytic kick, and N-body on departure. The impulse approximation requires that the single kick captures the entire effect; the PBH must not simultaneously exert live N-body forces.
+- **Violates intent:** The project intends to use the impulse approximation as a computational shortcut for PBH encounters, replicating Tran et al.; using both N-body and analytic kick on the same run is contradictory and physically wrong.
+- **Falsifier (upheld):** simulation_runner.py:94-99 adds the PBH as a live REBOUND particle with full pbh_mass. apply_analytic_kick (line 111) integrates the system to t_ca internally (comment lines 107-116) — during which the live full-mass PBH exerts N-body gravity on approach — then applies the full analytic impulse. The PBH is never removed, so the main integration loop (line 143+) continues to t_end with the full-mass PBH still exerting forces on departure. The impulse approximation requires the single kick to capture the entire flyby effect; simultaneously running the PBH as a live gravitational body double/triple-counts the perturbation. Physics design defect confirmed.
+
+### F041 — Perturbed simulation pre-encounter state (t_start) permanently lost when output arrays are reallocated after kick
+
+- **Severity / class:** high / bug
+- **Location:** `src/simulation_runner.py:126`
+- **Evidence:** Lines 67-75 store the initial state at t=t_start into positions_out[0] and velocities_out[0] for len(masses) particles. When pbh_params is present, lines 126-127 reallocate positions_out and velocities_out to new zero arrays of shape (n_steps+1, len(masses)+1, 3), discarding the old arrays and their row-0 contents entirely. Lines 130-133 then overwrite times_out[0] with t_ca (the post-kick time) and fill the new positions_out[0] with the post-kick state at t_ca — not t_start. The perturbed trajectory output therefore begins at t_ca, not t_start. compute_residuals (residual_analysis.py:98) uses np.interp which silently clips to boundary values for query times before the perturbed array's first time point, making residuals for [t_start, t_ca] silently wrong.
+- **Violates intent:** The project intends to compute full-window orbital residuals between baseline and perturbed trajectories; losing the perturbed pre-encounter state corrupts the residual time series.
+- **Falsifier (upheld):** Confirmed at src/simulation_runner.py. Lines 67-75 capture the t_start state into positions_out[0]/velocities_out[0]. When pbh_params is truthy, lines 126-127 reassign positions_out and velocities_out to fresh np.zeros arrays, discarding the old row-0 contents. Line 130 overwrites times_out[0] with sim_instance.get_simulation_time() (the post-kick time t_ca, since apply_analytic_kick integrates to and leaves the sim at t_ca per n_body_simulation.py:203-204), and lines 131-133 fill positions_out[0]/velocities_out[0] with the post-kick state. The main loop (143-167) continues from t_ca, so the perturbed output begins at t_ca, not t_start. compute_residuals (residual_analysis.py:98) then np.interp-clips for query times < t_ca. Defect is real and high severity.
+
+### F046 — calculate_detection_rates inflates total_completed denominator with unclassifiable members, biasing detection rate toward zero
+
+- **Severity / class:** high / bug
+- **Location:** `src/ensemble_runner.py:367`
+- **Evidence:** At line 367, `total_completed += 1` is executed unconditionally for every member with `status=='completed'`. At line 368, `is_detected(...)` is called, which returns `None` when stats are missing or invalid. Line 371 checks `if detected is None: continue`, skipping the member from `total_detected` AND from bin counts — but NOT reversing the `total_completed` increment already taken. The overall rate at line 394 is `total_detected / total_completed`, where `total_completed` includes unclassifiable members that contribute neither to the numerator nor to any bin. Separately, members with valid detection status whose mass falls outside `mass_bins` are counted in `total_completed` but not in any `totals_by_bin`, making the overall rate inconsistent with the sum of binned rates.
+- **Violates intent:** The project intends to estimate detection rates as a function of PBH mass from Monte Carlo ensembles. A biased denominator silently underestimates detection rates, corrupting the primary scientific output.
+- **Falsifier (upheld):** Confirmed at src/ensemble_runner.py. Line 367 'total_completed += 1' executes unconditionally for every status=='completed' member, BEFORE the is_detected call at line 368. When is_detected returns None (missing/invalid stats), line 370-372 'if detected is None: continue' skips the member from total_detected and bin counts but does NOT decrement total_completed. Line 394 computes overall_rate = total_detected/total_completed with an inflated denominator. Additionally, members with valid status whose mass falls outside mass_bins pass the digitize range check at line 385 (0<=bin_index<num_bins) and are excluded from totals_by_bin while still counted in total_completed, making the overall rate inconsistent with the binned rates. Upheld, high.
+
+### F002 — np.load called with allow_pickle=True on user-supplied path (unsafe deserialization)
+
+- **Severity / class:** medium / security
+- **Location:** `src/residual_analysis.py:206`
+- **Evidence:** `data = np.load(filepath, allow_pickle=True)` in load_residuals; filepath is an arbitrary caller/ensemble-supplied path. allow_pickle=True permits a crafted .npz to deserialize arbitrary Python objects (pickle) on load, a known RCE vector, compounding the eval() issue on the same path.
+- **Violates intent:** Violates the safe load/save residual round-trip required by intent (2) (compute orbital residuals) — reading a stored artifact should be inert.
+- **Falsifier (upheld):** residual_analysis.py:206 `data = np.load(filepath, allow_pickle=True)` in load_residuals on a caller/ensemble-supplied filepath (default ensemble path member_*/residuals.npz, ensemble_runner.py:49). allow_pickle=True enables pickle deserialization of crafted .npz contents — a known RCE vector, on the same path as the eval issue. Confirmed.
+
+### F008 — Absolute import 'from analytic_impulse import ...' breaks when n_body_simulation is imported as a package module
+
+- **Severity / class:** medium / bug
+- **Location:** `src/n_body_simulation.py:4`
+- **Evidence:** n_body_simulation.py uses `from analytic_impulse import calculate_velocity_kick, G as analytic_G` (top-level import), while simulation_runner.py:4 and ensemble_runner.py:10-13 import it via package-relative `from . import n_body_simulation`. Under package execution (e.g. `python -m src.ensemble_runner`) the top-level name 'analytic_impulse' is not on sys.path, so importing n_body_simulation raises ModuleNotFoundError unless src happens to be on the path.
+- **Violates intent:** Violates the 'complete, modular computational pipeline' intent — modules cannot be reliably imported together as a package.
+- **Falsifier (upheld):** n_body_simulation.py:4 uses top-level absolute `from analytic_impulse import calculate_velocity_kick, G as analytic_G`, while simulation_runner.py:4 imports it package-relatively (`from . import n_body_simulation`) and ensemble_runner.py:10-13 uses `from . import n_body_simulation`. Under package execution (e.g. `python -m src.ensemble_runner`), 'analytic_impulse' is not a top-level module on sys.path, so importing n_body_simulation raises ModuleNotFoundError unless src/ happens to be on sys.path. Confirmed.
+
+### F009 — add_solar_system swallows exceptions and continues with a possibly empty simulation
+
+- **Severity / class:** medium / bug
+- **Location:** `src/n_body_simulation.py:97`
+- **Evidence:** The `try/except Exception as e:` around `self.sim.add_solar_system(date=date)` only does `print(f"Error adding Solar System bodies: {e}")` (lines 97-99) and neither re-raises nor returns a status. A failed JPL Horizons fetch leaves the simulation with no/partial bodies, and downstream code proceeds as if bodies were added. Comment 'Consider fallback or raising the error' confirms no handling.
+- **Violates intent:** Violates intent (1): a baseline Solar System must exist for residual computation; silently continuing produces invalid baselines.
+- **Falsifier (upheld):** n_body_simulation.py:97-99 confirms `except Exception as e: print(f"Error adding Solar System bodies: {e}")` with no re-raise and no status return; comment at line 99 'Consider fallback or raising the error' confirms no handling. A failed add_solar_system leaves a possibly empty sim and execution continues.
+
+### F011 — Velocity kick points away from the PBH (sign error in kick direction)
+
+- **Severity / class:** medium / bug
+- **Location:** `src/analytic_impulse.py:66`
+- **Evidence:** r_ca is the relative position at closest approach computed from `initial_relative_position = pbh_position - body_position` (line 33) and `r_ca = initial_relative_position + relative_velocity * t_ca` (line 48), i.e. it points from the body toward the PBH. Gravity should accelerate the body toward the PBH (along +r_ca), but `kick_direction = -r_ca / b` (line 66) points away from the PBH, so the impulse is applied in the wrong direction.
+- **Violates intent:** Violates intent (1)/(2): the impulse-approximation kick must attract the body toward the PBH path; an inverted kick yields physically wrong residuals.
+- **Falsifier (upheld):** analytic_impulse.py:33 sets initial_relative_position = pbh_position - body_position (body→PBH), line 48 r_ca = that + relative_velocity*t_ca (still body→PBH). Gravity accelerates the body toward the PBH (+r_ca), but line 66 sets kick_direction = -r_ca / b, pointing away from the PBH. Sign error confirmed.
+
+### F012 — JSON serialization of numpy values in summaries/results fails, breaking checkpointing and final output
+
+- **Severity / class:** medium / bug
+- **Location:** `src/ensemble_runner.py:136`
+- **Evidence:** summary['pbh_params'] is the sampler dict containing a numpy array ('velocity_au_day') and numpy float ('mass_msun') (parameter_sampler.py:112-117). `json.dump(summary, f_sum, indent=4)` (ensemble_runner.py:136), the checkpoint dump (line 249) and the final dump (line 263) all serialize these objects; the standard json encoder cannot serialize numpy ndarray/float64 and raises TypeError. These are caught only by surrounding try/except that print warnings, so per-member summaries, checkpoints, and final aggregated results are not persisted.
+- **Violates intent:** Violates intent (3): ensemble results and checkpoints (needed to compute detection rates and resume long runs) are silently not saved.
+- **Falsifier (upheld):** summary['pbh_params'] (ensemble_runner.py:54) is the sampler dict carrying 'velocity_au_day' (numpy ndarray) and 'mass_msun' (numpy float) from parameter_sampler.py:113-115. json.dump at lines 136, 249, and 263 cannot serialize numpy ndarray/float64 and raises TypeError; the surrounding try/except at 137-138, 251-252, 273-274 only print warnings, so per-member summaries, checkpoints, and final results are not persisted.
+
+### F026 — eval() used to deserialize untrusted metadata from .npz files — code injection risk
+
+- **Severity / class:** medium / security
+- **Location:** `src/residual_analysis.py:215`
+- **Evidence:** Line 215: `metadata = eval(metadata_str) # Use eval carefully! Assumes trusted source.` The metadata string was stored as `str({...})` at save_residuals line 148 and is loaded back with `allow_pickle=True` at line 206. eval() on a crafted .npz file's metadata field executes arbitrary Python. The comment acknowledges the risk but provides no safe alternative (e.g., ast.literal_eval or json.loads).
+- **Violates intent:** Intent (4): synthetic observations are loaded from .npz files for parameter recovery testing; any external or shared .npz file becomes a code-injection vector.
+- **Falsifier (upheld):** src/residual_analysis.py:215 is `metadata = eval(metadata_str) # Use eval carefully! Assumes trusted source.` The string originates from `str(meta_str_dict)` at save line 148 and is reloaded via `np.load(..., allow_pickle=True)` at line 206 then `data['metadata'].item()` at line 214. A crafted .npz metadata field is passed to eval() with no ast.literal_eval/json safeguard — arbitrary code execution risk confirmed.
+
+### F027 — residual_analysis.py __main__ block: stats calculation is inside the failure (else) branch — dead code on success
+
+- **Severity / class:** medium / bug
+- **Location:** `src/residual_analysis.py:395`
+- **Evidence:** Lines 363-410: `if res_t is not None and res_p is not None and res_v is not None:` block handles successful computation (save/load). The `else:` block at line 395 prints 'Residual computation failed (returned None).' and then at line 398 calls `calculate_residual_stats(res_p, res_v)` — but at this point res_p and res_v are None since residual computation failed. The stats calculation never runs when residuals are successfully computed; it runs only on failure, where it calls stats on None inputs.
+- **Violates intent:** Intent (2): the __main__ demonstration of residual statistics is a key validation of the analysis pipeline; the inverted branch means the stats example is unreachable in the success path.
+- **Falsifier (upheld):** src/residual_analysis.py: success path is the `if res_t/res_p/res_v is not None` block (lines 363-392) which only saves/loads. The `else:` branch (line 394-410, entered precisely when residuals are None) prints the failure message at 395 then calls `calculate_residual_stats(res_p, res_v)` at line 399 — with res_p and res_v guaranteed None. Stats never run on success and run only on failure with None inputs, exactly as described.
+
+### F028 — visualization.py calls plt.show() unconditionally in every plot function — blocks headless batch execution
+
+- **Severity / class:** medium / design-defect
+- **Location:** `src/visualization.py:76`
+- **Evidence:** plt.show() is called unconditionally at: line 76 (plot_trajectories_2d), line 175 (plot_residual_timeseries), line 314 (plot_detection_scatter), line 384 (plot_binned_detection_rate). In server or batch ensemble contexts (which the ensemble_runner is designed for), plt.show() either raises a display error or blocks execution waiting for GUI interaction. No `show=True` parameter or guard is provided.
+- **Violates intent:** Intent (3): visualization is expected to operate alongside large ensemble runs; unconditional plt.show() makes the module unusable in the primary production context.
+- **Falsifier (upheld):** Grep of src/visualization.py confirms unconditional `plt.show()` calls at lines 76, 175, 314, and 384 — matching the four plot functions cited. No show=True parameter or headless guard precedes them; in the batch/server context the ensemble_runner targets this blocks or errors.
+
+### F029 — setup.py declares pytest and pytest-cov in install_requires — test tools become mandatory runtime dependencies
+
+- **Severity / class:** medium / design-defect
+- **Location:** `setup.py:14`
+- **Evidence:** setup.py lines 14-15: `"pytest"`, `"pytest-cov"` appear inside `install_requires=[...]`. Test frameworks are development/CI dependencies; placing them in install_requires forces every `pip install primordial_encounters` (including in production simulation environments) to also install pytest. Correct placement is `extras_require={'dev': ['pytest', 'pytest-cov']}`.
+- **Violates intent:** Packaging correctness is part of providing a usable research framework.
+- **Falsifier (upheld):** setup.py lines 10-17: `install_requires=[...]` contains "pytest" (line 15) and "pytest-cov" (line 16). Test frameworks are placed as mandatory runtime dependencies rather than under extras_require, confirming the finding.
+
+### F030 — setup.py find_packages() will not find src/ — package name 'primordial_encounters' matches no directory
+
+- **Severity / class:** medium / design-defect
+- **Location:** `setup.py:9`
+- **Evidence:** setup.py:8-9: `packages=find_packages()` requires `__init__.py` in each package directory. There is no `src/__init__.py` in the repository surface (only `tests/__init__.py` exists). find_packages() discovers only `tests`. The declared `name='primordial_encounters'` matches no directory; the actual code lives in `src/`. A pip-installed package would contain only the tests module and none of the simulation code.
+- **Violates intent:** The project intends to be pip-installable as 'primordial_encounters'; the setup.py cannot produce a functioning installation.
+- **Falsifier (upheld):** setup.py:9 uses `packages=find_packages()` with no package_dir mapping. Glob for src/__init__.py returns no files, so find_packages() discovers only the tests package (tests/__init__.py exists). The declared name 'primordial_encounters' (line 7) maps to no directory and the src/ simulation code would be excluded from an installed package.
+
+### F031 — Parameter recovery feature documented in README but no module exists
+
+- **Severity / class:** medium / doc-drift
+- **Location:** `README.md:53`
+- **Evidence:** README.md:53-57 Feature #5: 'Parameter Recovery & Statistical Testing — Recover PBH mass and trajectory from synthetic observed orbital perturbations — Perform likelihood ratio tests vs. a no PBH null hypothesis'. docs/pseudocode.md:429-475 provides a complete RecoverPBHParameters() specification. No `parameter_recovery.py` or equivalent exists in src/. synthetic_data.py adds noise to residuals but performs no fitting or hypothesis testing.
+- **Violates intent:** Intent (4): parameter recovery testing is listed as a primary goal of the project.
+- **Falsifier (upheld):** README.md:54-56 documents Feature #5 'Parameter Recovery & Statistical Testing' (recover PBH mass, likelihood ratio tests). Glob shows no parameter_recovery.py among the 8 src/*.py files, and a case-insensitive grep for recover/likelihood/null hypothesis across src/ returns no matches. synthetic_data.py exists but contains no fitting/hypothesis-testing code. The cited :53 is one line off the header but the documented feature block is present and unimplemented.
+
+### F032 — Spectral analysis feature documented in README and pseudocode but no module exists
+
+- **Severity / class:** medium / doc-drift
+- **Location:** `README.md:58`
+- **Evidence:** README.md:58-61 Feature #6: 'Spectral Analysis (Optional) — Fourier methods to confirm the near-monochromatic nature of orbital deviations'. docs/pseudocode.md:282-308 specifies ComputePowerSpectrum() and AnalyzeResidualSpectrum(). No FFT/spectral analysis code exists in any src/ module.
+- **Violates intent:** Intent (2): the paper's Figure 3 right panel shows spectral analysis of residuals; replicating this result requires the missing spectral module.
+- **Falsifier (upheld):** README.md:58-60 documents Feature #6 'Spectral Analysis (Optional)' with Fourier methods. A case-insensitive grep for fft/fourier/spectr/power_spectrum/periodogram across all src/ modules returns no matches, confirming no spectral/FFT module exists despite the documentation and pseudocode spec.
+
+### F033 — README references MIT LICENSE file that does not exist
+
+- **Severity / class:** medium / doc-drift
+- **Location:** `README.md:159`
+- **Evidence:** README.md:159: 'This project is offered under the MIT License(LICENSE).' — hyperlink points to a LICENSE file. No LICENSE file appears in the repository surface. The repository has no license declaration, making the legal status of the code ambiguous.
+- **Violates intent:** A research framework intended for public use requires a valid license file to be legally usable by others.
+- **Falsifier (upheld):** README.md:160 (finding cites 159, off-by-one but the content is at 160) reads 'This project is offered under the [MIT License](LICENSE).' — a markdown hyperlink to a LICENSE file. Glob for LICENSE* in the repo returns no files, so the linked LICENSE does not exist and the repo carries no license declaration. Doc-drift confirmed.
+
+### F034 — test_initialization is a bare pass — no physics correctness tests exist anywhere in the test suite
+
+- **Severity / class:** medium / code-intent-mismatch
+- **Location:** `tests/test_n_body_simulation.py:23`
+- **Evidence:** test_n_body_simulation.py:23-27: `def test_initialization(self): / pass` — decorated with @unittest.skipIf but body is pass regardless. test_project_structure() at line 29 only checks that four directories exist. No test covers: calculate_velocity_kick() accuracy, residual computation correctness, parameter sampling distributions, detection rate calculation, or any numerical physics result. pytest.ini defines testpaths=tests but there are no tests for any src/ module beyond directory-existence checks.
+- **Violates intent:** The project intends to replicate the methodology of Tran et al.; without tests verifying numerical correctness, any physics bug (like the velocity conversion errors) goes undetected.
+- **Falsifier (upheld):** tests/test_n_body_simulation.py:22-27: test_initialization is decorated @unittest.skipIf and its body is a bare `pass`. test_project_structure (lines 29-40) only asserts four directories exist via os.path.isdir. No test in the file exercises calculate_velocity_kick, residual computation, sampling distributions, or any numerical physics result. It is the only test file in tests/, so no physics-correctness test exists in the suite.
+
+### F042 — compute_residuals uses np.interp which silently clips to boundary values when time ranges do not fully overlap — produces wrong residuals without warning
+
+- **Severity / class:** medium / bug
+- **Location:** `src/residual_analysis.py:98`
+- **Evidence:** Lines 98-99: np.interp(residual_times, pert_times, pert_pos[:, particle_idx, dim]) with no range-overlap check. Per NumPy documentation np.interp extrapolates by returning the first or last value when query points fall outside the interpolation range. If base_times extends beyond pert_times (structurally guaranteed when the perturbed run starts at t_ca as described in the output-array reallocation bug), residuals for out-of-range steps use a constant boundary value, silently producing incorrect residuals. The only guard (line 86) checks for identical arrays, not range overlap.
+- **Violates intent:** The project intends residual computation to be the primary observable for PBH detection; silently wrong residuals directly corrupt detection rate estimates.
+- **Falsifier (upheld):** Confirmed at src/residual_analysis.py:98-99. np.interp is called with no range-overlap check; the only guard (line 86) tests for identical arrays. NumPy's np.interp does not extrapolate — it returns the boundary (first/last) y-value for query points outside [pert_times[0], pert_times[-1]], silently yielding constant, incorrect residuals where base_times extends beyond pert_times. Structurally triggered by the F041 t_ca start-time shift. Upheld.
+
+### F047 — plot_residual_timeseries uses residuals-array-local indices to index a labels list documented as indexed by original particle indices, mislabeling every plotted line
+
+- **Severity / class:** medium / bug
+- **Location:** `src/visualization.py:137`
+- **Evidence:** At line 127, `valid_indices` is built as `[idx for idx in particle_indices if 0 <= idx < n_particles_res]` — these are 0-based positions in the *residuals* array. At line 137, `plot_labels = [labels[idx] for idx in valid_indices]` indexes the caller-supplied `labels` list using those same residuals-array positions. The docstring (line 97-98) documents `labels` as 'corresponding to the *original* particle indices before potential selection via particle_indices.' When residuals represent a subset that does not start at particle 0 (e.g., Earth+Jupiter after excluding the Sun), `valid_indices` are residuals indices 0,1,... while the correct labels are at `labels[original_idx]`. The `__main__` example at line 443-451 demonstrates the bug: `res_p_eg` holds Earth and PlanetX residuals (original particles 1 and 2), `particle_indices=[0,1]`, `labels=['Sun','Earth','PlanetX']`; the function assigns labels 'Sun' and 'Earth' instead of 'Earth' and 'PlanetX'.
+- **Violates intent:** The project intends to generate publication-quality visualizations of orbital residuals. Systematically mislabeled residual time-series plots corrupt any analysis or figure derived from them.
+- **Falsifier (upheld):** Confirmed at src/visualization.py. Line 127 builds valid_indices as positions within the residuals array (0..n_particles_res-1). Line 137 'plot_labels = [labels[idx] for idx in valid_indices]' indexes the caller's labels list with those residuals-array positions, while the docstring lines 96-98 documents labels as indexed by ORIGINAL particle indices. The __main__ example (lines 444-452) demonstrates the bug: res_p_eg holds Earth+PlanetX residuals (original particles 1,2), particle_indices=[0,1], labels=['Sun','Earth','PlanetX'] -> plot_labels=['Sun','Earth'] instead of the correct ['Earth','PlanetX']. Mislabeling confirmed. Upheld, medium.
+
+### F048 — is_detected computes norm of per-dimension temporal peak values, overestimating true peak 3D displacement and producing false positive detections
+
+- **Severity / class:** medium / bug
+- **Location:** `src/ensemble_runner.py:316`
+- **Evidence:** At line 316, `peak_residual_magnitude = np.linalg.norm(pos_peak_au[target_particle_idx, :])`. The array `pos_peak_au` is the output of `calculate_peak` (residual_analysis.py:293: `np.max(np.abs(data_residuals), axis=0)`), so each element is the temporal maximum for one dimension independently. These per-dimension maxima occur at different time steps. The Euclidean norm of `[max_x, max_y, max_z]` gives `sqrt(max_x^2 + max_y^2 + max_z^2)`, which is strictly >= the true peak 3D magnitude `max_t(sqrt(x(t)^2+y(t)^2+z(t)^2))` by the Cauchy-Schwarz inequality. The overestimate can cause the threshold comparison `peak_residual_magnitude > threshold_au` to return True (detected) when the actual peak 3D displacement never exceeded the threshold at any single moment.
+- **Violates intent:** The project intends to calculate detection rates from residual statistics. Overestimating peak displacement inflates the detection rate and invalidates rate estimates, undermining the core Monte Carlo analysis goal.
+- **Falsifier (upheld):** Confirmed at src/ensemble_runner.py:316 'np.linalg.norm(pos_peak_au[target_particle_idx, :])', where pos_peak_au comes from calculate_peak (residual_analysis.py:293 'np.max(np.abs(data_residuals), axis=0)') — independent per-dimension temporal maxima. sqrt(max_x^2+max_y^2+max_z^2) >= max_t sqrt(x(t)^2+y(t)^2+z(t)^2) because each per-dimension squared maximum dominates that dimension at every t; equality only if all dims peak simultaneously. The overestimate can push peak_residual_magnitude > threshold_au (line 318) when the true instantaneous 3D displacement never exceeded the threshold, producing false-positive detections. (The 'Cauchy-Schwarz' attribution is loose — it is the per-component max inequality — but the conclusion holds.) Upheld, medium.
+
+### F049 — src/ directory has no __init__.py; namespace-package status prevents pip-installable package even if directory name or find_packages() call is corrected
+
+- **Severity / class:** medium / design-defect
+- **Location:** `src/`
+- **Evidence:** Glob for `**/__init__.py` returns only `tests/__init__.py`; there is no `src/__init__.py`. Python's `setuptools.find_packages()` identifies packages by the presence of `__init__.py`. Without it, `find_packages()` returns an empty list regardless of the `name=` or `where=` arguments, so `pip install .` installs nothing from `src/`. In Python 3, `src` is treated as a namespace package, which works for development (when `src/` is on sys.path) but breaks upon installation: installed namespace packages do not support relative imports (`from . import parameter_sampler`), which are used in ensemble_runner.py, simulation_runner.py, synthetic_data.py, and visualization.py via try/except blocks. The existing finding at setup.py:9 attributes the failure to a directory-name mismatch; the missing `__init__.py` is a separate, independent cause that would remain even if the directory were renamed correctly.
+- **Violates intent:** The project is packaged via setup.py and is intended to be importable as a module. Without __init__.py the package cannot be installed or used in relative-import mode by external consumers.
+- **Falsifier (upheld):** Confirmed at source. `find . -name __init__.py` returns only ./tests/__init__.py — there is NO src/__init__.py. setup.py:9 calls bare find_packages() (no `where=`/`package_dir`), which discovers packages by presence of __init__.py; with src lacking one, find_packages() returns ['tests'] (or empty re: src), so `pip install .` installs no module from src/. The src modules use relative imports that require true package context: ensemble_runner.py:10-13 (`from . import parameter_sampler/simulation_runner/residual_analysis/n_body_simulation`), simulation_runner.py:4-5 (`from . import n_body_simulation/analytic_impulse`), synthetic_data.py:6 (`from . import residual_analysis`). These confirm the finding's claim that missing __init__.py is an independent cause of un-installability distinct from any directory-name/where= mismatch. Severity medium is reasonable: blocks installation but dev-mode sys.path execution still works.
+
+### F013 — Particle-count resize in the integration loop is lossy and uses inconsistent initial allocation
+
+- **Severity / class:** low / design-defect
+- **Location:** `src/simulation_runner.py:151`
+- **Evidence:** After the PBH branch reallocates arrays to num_particles+1 (lines 126-127), the main loop still guards with `if len(current_state) != positions_out.shape[1]:` and reallocates/copies arrays mid-loop (lines 151-161), explicitly noted 'this is inefficient, better to size correctly initially'. The min-shape copy (lines 158-161) silently drops data if shapes shrink and the per-particle bounds check (line 165-169) drops out-of-bounds particles, masking state-array sizing errors instead of failing.
+- **Violates intent:** Weakens intent (1)/(2): reliable per-step state capture is required to compute correct residuals.
+- **Falsifier (upheld):** simulation_runner.py:126-127 reallocates to num_particles+1 in the PBH branch, yet the loop at lines 151-161 still resizes mid-loop with the explicit comment 'this is inefficient, better to size correctly initially'. The min-shape copy (158-161) silently drops data on shrink and the bounds check (165-169) drops out-of-bounds particles, masking sizing errors. Confirmed as a design defect.
+
+### F014 — Stub example advertised as runnable single-flyby demo performs no simulation
+
+- **Severity / class:** low / doc-drift
+- **Location:** `examples/single_flyby_example.py:34`
+- **Evidence:** The module docstring claims it 'shows how to: 1. Set up a solar system model ... 3. Run the simulation 4. Analyze the results', but the body only prints parameters and then `print("\nThis is a placeholder example. The actual implementation will:")` — it never imports or calls any src module to run a flyby.
+- **Violates intent:** Mismatch with intent's 'one stub example' / end-to-end usage expectation: the only example does not exercise the pipeline.
+- **Falsifier (upheld):** examples/single_flyby_example.py docstring (lines 4-8) claims it runs the simulation and analyzes results, but the body (lines 20-39) only prints parameters and line 34 prints 'This is a placeholder example. The actual implementation will:'. No src module is imported or called. Doc-drift confirmed.
+
+### F035 — parameter_sampler.py imports scipy.stats but never calls any scipy function
+
+- **Severity / class:** low / other
+- **Location:** `src/parameter_sampler.py:2`
+- **Evidence:** Line 2: `import scipy.stats as stats`. No reference to `stats.` appears anywhere in the file. All sampling uses np.random (np.random.uniform, np.random.normal). scipy is listed as a required dependency in requirements.txt, adding a heavy dependency for zero benefit in this module.
+- **Violates intent:** Clean dependency management for a scientific computing package.
+- **Falsifier (upheld):** parameter_sampler.py:2 imports `scipy.stats as stats`. I read the entire file (162 lines): no `stats.` reference appears anywhere; all sampling uses np.random.uniform / np.random.normal (lines 25, 41, 60-62, 83). scipy is a declared dependency (requirements.txt:4, setup.py:13) but unused in this module.
+
+### F036 — FORMAT_CSV constant is defined but save_residuals always returns False for CSV format
+
+- **Severity / class:** low / doc-drift
+- **Location:** `src/residual_analysis.py:6`
+- **Evidence:** residual_analysis.py:6: `FORMAT_CSV = 'csv'`. save_residuals() lines 154-177: the CSV branch prints 'Warning: CSV saving is not yet implemented' and `return False`. The constant is exported as part of the public API (used in save_residuals signature default), misleading callers into thinking CSV is a supported format option.
+- **Violates intent:** API contract: exported constants should represent supported functionality.
+- **Falsifier (upheld):** residual_analysis.py:6 defines FORMAT_CSV='csv'. The CSV branch (lines 154-177) prints 'Warning: CSV saving is not yet implemented' (line 158) and unconditionally `return False` (line 177); the real implementation is commented out. The constant is a module-level public name a caller can pass as format=. Core defect upheld. Minor inaccuracy in the finding's parenthetical: the save_residuals signature default is FORMAT_NPZ, not FORMAT_CSV (line 114: `format=FORMAT_NPZ`); this does not affect the substantive claim.
+
+### F043 — dt_rebound set to None when dt_years is falsy; integration loop unconditionally dereferences it causing TypeError
+
+- **Severity / class:** low / bug
+- **Location:** `src/simulation_runner.py:38`
+- **Evidence:** Line 38: dt_rebound = dt_years * 2 * np.pi if dt_years else None uses a truthy check, equating dt_years=0.0 with None. If dt_rebound is None, line 144 computes next_time_rebound = min(sim_instance.sim.t + dt_rebound, target_rebound_time), raising TypeError: unsupported operand type(s) for +: 'float' and 'NoneType'. Line 65 correctly handles the falsy case for n_steps but the loop body does not. The docstring (line 21) implies dt_years may be omitted for adaptive integrators, making this a reachable crash path.
+- **Violates intent:** Adaptive integrators (ias15) do not require a fixed timestep; callers following the docstring that omit or zero dt_years hit an unguarded crash.
+- **Falsifier (upheld):** Confirmed at src/simulation_runner.py:38: 'dt_rebound = dt_years * 2 * np.pi if dt_years else None' — a truthy test that maps dt_years=0.0/None to None. Line 65 separately guards n_steps (defaults to 100 when falsy), so the while loop at line 143 is entered, and line 144 'min(sim_instance.sim.t + dt_rebound, target_rebound_time)' dereferences dt_rebound, raising TypeError for float + NoneType. Reachable crash path. Upheld (low severity reasonable since callers normally pass a positive dt).
+
+### F045 — visualization.py and synthetic_data.py __main__ blocks use bare (non-relative) imports incompatible with package-mode execution
+
+- **Severity / class:** low / design-defect
+- **Location:** `src/visualization.py:510`
+- **Evidence:** visualization.py line 510 inside __main__: 'from ensemble_runner import calculate_detection_rates'. synthetic_data.py line 156 inside __main__ try block: 'import visualization'. Both are bare absolute imports. When these modules are imported as part of the src package (e.g., python -m src.visualization), the bare names are not resolvable via the package namespace; they require src/ to be on sys.path directly. In synthetic_data.py the ImportError is silently swallowed at line 174, skipping the comparison plot. In visualization.py the except ImportError at line 528 silently skips the binned rate example. This is the same class of defect as the already-flagged bare import in n_body_simulation.py:4 but at two additional uncovered locations.
+- **Violates intent:** The project intends src/ modules to work both as importable package members and as standalone demonstration scripts; bare imports in __main__ blocks break the package execution path silently.
+- **Falsifier (upheld):** Confirmed at both anchors. visualization.py:510 inside the __main__ try block: 'from ensemble_runner import calculate_detection_rates' (bare absolute import), with 'except ImportError' silently skipping at line 528-529. synthetic_data.py:156 inside the __main__ try block: 'import visualization' (bare), with 'except ImportError' silently swallowing at line 174-175. Under package-mode execution (python -m src.visualization), the package dir is not on sys.path so these bare names are unresolvable and the ImportError is silently swallowed, skipping the examples. Same class as the n_body_simulation.py bare-import defect. Upheld.
+
+### F044 — apply_analytic_kick docstring states simulation must be at t=0 but implementation uses current simulation time — misleading contract
+
+- **Severity / class:** info / doc-drift
+- **Location:** `src/n_body_simulation.py:201`
+- **Evidence:** The method docstring (lines 201-208) reads 'Assumes the simulation is at the initial time (t=0) where initial positions/velocities are used for the kick calculation.' The implementation (line 215 comment) contradicts this: 'We calculate the kick based on the state at the *current* simulation time.' The code uses self.get_simulation_time() and self.sim.t — the current time, not necessarily zero. This misleads callers who may assume the method can only be called at t=0, preventing correct use in multi-phase pipelines where apply_analytic_kick might be called mid-simulation.
+- **Violates intent:** Accurate API documentation is essential for researchers composing multi-phase simulation pipelines involving pre-encounter integration followed by kick application.
+- **Falsifier (upheld):** Confirmed doc-drift at src/n_body_simulation.py. Docstring lines 202-203 state 'Assumes the simulation is at the initial time (t=0) where initial positions/velocities are used for the kick calculation.' The implementation contradicts this: line 214 reads initial_time_years = self.get_simulation_time(), the inline comment line 215 says 'state at the *current* simulation time', and line 243 uses self.sim.t (current time) for t_ca_absolute. The method works at the current time, not necessarily t=0. Upheld (info).
+
+## Refuted / unverified candidates (1)
+
+| Title | Location | Status | Why |
+| --- | --- | --- | --- |
+| run_simulation does not pass exact_finish_time=1, causing WHFast/Mercurius runs to overshoot target end time | `src/n_body_simulation.py:145` | refuted | The behavioral claim is false: REBOUND's Python API Simulation.integrate(self, tmax, exact_finish_time=1) defaults exact_finish_time to 1. run_simulation (n_body_simulation.py:145) calling self.sim.integrate(target_rebound_time) without the kwarg therefore uses exact_finish_time=1 — identical to integrate_to_time's explicit pass at line 169. Both finish exactly at the target; there is no one-timestep overshoot and no divergence in final times for the same target. The cited code difference exists but does not produce the asserted effect. |
+
+
+<details><summary>machine-readable JSON</summary>
+
+```json
+{
+  "findings": [
+    {
+      "title": "eval() executed on metadata string loaded from .npz file (arbitrary code execution)",
+      "location": "src/residual_analysis.py:215",
+      "class": "security",
+      "severity": "high",
+      "evidence": "load_residuals does `metadata_str = str(data['metadata'].item())` then `metadata = eval(metadata_str)` with the in-code comment `# Use eval carefully! Assumes trusted source.`. The metadata is the stringified dict written by save_residuals (line 148, `np.array([str(meta_str_dict)])`). Any .npz file fed to load_residuals can carry an arbitrary Python expression in its 'metadata' array that eval will execute, giving code execution from a data file.",
+      "intent_link": "Violates intent (4) 'generate synthetic observations ... for parameter recovery testing' and the load/save round-trip of residual data — loading a results artifact must not execute untrusted code.",
+      "id": "F001",
+      "status": "survived",
+      "falsifier_note": "residual_analysis.py:215 `metadata = eval(metadata_str)` with comment '# Use eval carefully! Assumes trusted source.', where metadata_str derives from data['metadata'].item() (line 214) loaded from an arbitrary .npz. save_residuals writes the stringified dict at line 148 (np.array([str(meta_str_dict)])). A crafted .npz can place an arbitrary Python expression in 'metadata' that eval executes — code execution from a data file. Confirmed."
+    },
+    {
+      "title": "np.load called with allow_pickle=True on user-supplied path (unsafe deserialization)",
+      "location": "src/residual_analysis.py:206",
+      "class": "security",
+      "severity": "medium",
+      "evidence": "`data = np.load(filepath, allow_pickle=True)` in load_residuals; filepath is an arbitrary caller/ensemble-supplied path. allow_pickle=True permits a crafted .npz to deserialize arbitrary Python objects (pickle) on load, a known RCE vector, compounding the eval() issue on the same path.",
+      "intent_link": "Violates the safe load/save residual round-trip required by intent (2) (compute orbital residuals) — reading a stored artifact should be inert.",
+      "id": "F002",
+      "status": "survived",
+      "falsifier_note": "residual_analysis.py:206 `data = np.load(filepath, allow_pickle=True)` in load_residuals on a caller/ensemble-supplied filepath (default ensemble path member_*/residuals.npz, ensemble_runner.py:49). allow_pickle=True enables pickle deserialization of crafted .npz contents — a known RCE vector, on the same path as the eval issue. Confirmed."
+    },
+    {
+      "title": "km/s -> AU/day conversion constant is wrong by ~86x",
+      "location": "src/parameter_sampler.py:11",
+      "class": "bug",
+      "severity": "high",
+      "evidence": "`KM_S_TO_AU_DAY = 1.0 / 1.731e6 * 86400.0` evaluates to ~0.0499. Correct value: 1 km/s = 86400 s/day / 1.496e8 km/AU = 5.78e-4 AU/day. The comment itself states '1 AU = 1.496e8 km' but the code uses 1.731e6 in the denominator, yielding velocities ~86x too large. sample_velocity (lines 65-69) multiplies all sampled component speeds by this constant, so every sampled PBH velocity is mis-scaled.",
+      "intent_link": "Violates intent (3) 'run large Monte Carlo ensembles to estimate detection rates' — encounter velocities feed directly into the impulse kick (Δv ∝ 1/v_rel), so detection-rate estimates are systematically corrupted.",
+      "id": "F003",
+      "status": "survived",
+      "falsifier_note": "parameter_sampler.py:11 `KM_S_TO_AU_DAY = 1.0 / 1.731e6 * 86400.0` = 86400/1.731e6 ≈ 0.04991. Correct 1 km/s = 86400 / 1.496e8 ≈ 5.775e-4 AU/day; ratio ≈ 86.4x too large. Comment states '1 AU = 1.496e8 km' yet code uses 1.731e6. sample_velocity (lines 65-67) multiplies all component speeds by this constant, mis-scaling every sampled velocity. Confirmed."
+    },
+    {
+      "title": "PBH mass key mismatch: simulation reads pbh_params['mass'] but sampler produces 'mass_msun' (KeyError aborts every perturbed run)",
+      "location": "src/simulation_runner.py:84",
+      "class": "bug",
+      "severity": "critical",
+      "evidence": "run_single_simulation does `pbh_mass = pbh_params['mass']`, but parameter_sampler.generate_pbh_sample (parameter_sampler.py:112-117) emits keys 'mass_msun','impact_param_au','velocity_au_day','t_encounter_years'. ensemble_runner passes pbh_samples[i] straight through (ensemble_runner.py:72, run_parallel_simulations -> run_single_simulation). `pbh_params['mass']` therefore raises KeyError, caught by the broad except at simulation_runner.py:180 returning (None,None,None); ensemble_runner.py:75 then raises RuntimeError. The end-to-end ensemble can never produce a perturbed result.",
+      "intent_link": "Directly breaks intent (1) and (3): N-body PBH-perturbed runs and Monte-Carlo detection ensembles cannot complete a single perturbed member.",
+      "id": "F004",
+      "status": "survived",
+      "falsifier_note": "simulation_runner.py:84 `pbh_mass = pbh_params['mass']`, but generate_pbh_sample (parameter_sampler.py:112-117) emits 'mass_msun' (not 'mass'). ensemble_runner.py:72 passes pbh_params (the sample) straight to run_parallel_simulations -> run_single/perturbed run. Subscript with absent 'mass' raises KeyError, caught by broad except at simulation_runner.py:180-184 returning (None,None,None); ensemble_runner.py:75-76 then raises RuntimeError. Perturbed result cannot be produced. Confirmed (note: line 86 already uses the correct 'velocity_au_day' key, but line 84 fails first)."
+    },
+    {
+      "title": "Impact parameter key mismatch: 'impact_param' default silently discards sampled 'impact_param_au'",
+      "location": "src/simulation_runner.py:91",
+      "class": "bug",
+      "severity": "high",
+      "evidence": "`pbh_initial_pos = np.array([-1000.0, pbh_params.get('impact_param', 100.0), 0.0])`. The sampler produces 'impact_param_au' (parameter_sampler.py:114), never 'impact_param', so .get always returns the hardcoded default 100.0 AU. Every PBH is placed at the same y-offset regardless of the sampled impact parameter.",
+      "intent_link": "Violates intent (3): detection rate as a function of PBH parameters is meaningless if the sampled impact parameter never reaches the simulation.",
+      "id": "F005",
+      "status": "survived",
+      "falsifier_note": "simulation_runner.py:91 `pbh_initial_pos = np.array([-1000.0, pbh_params.get('impact_param', 100.0), 0.0])`. The sampler emits 'impact_param_au' (parameter_sampler.py:114), never 'impact_param', so .get always returns the hardcoded 100.0 default and the sampled impact parameter is discarded. (In practice the line 84 KeyError aborts before reaching here, but the key mismatch itself is real.) Confirmed."
+    },
+    {
+      "title": "Hardcoded kick target 'body_3' does not exist for the configured body set",
+      "location": "src/simulation_runner.py:104",
+      "class": "bug",
+      "severity": "high",
+      "evidence": "`target_body_label = \"body_3\"` is hardcoded, but labels are built as `body_{i}` with body_0 renamed 'Sun' (simulation_runner.py:48-50). For the example/ensemble setup with masses of length 3 (Sun, Body1, Body2) the labels are ['Sun','body_1','body_2'] — there is no 'body_3'. apply_analytic_kick then fails to find the target (n_body_simulation.py:281-285) and returns False, so no kick is applied.",
+      "intent_link": "Violates intent (1)/(2): the PBH impulse is never applied to the intended body, so residuals reflect no perturbation.",
+      "id": "F006",
+      "status": "survived",
+      "falsifier_note": "simulation_runner.py:104 `target_body_label = \"body_3\"` is hardcoded. Labels are built as body_{i} with body_0 renamed 'Sun' (simulation_runner.py:48-50), so a 3-mass setup yields ['Sun','body_1','body_2'] — no 'body_3'. apply_analytic_kick's target search (n_body_simulation.py:276-285) finds no match and returns False at line 285, so no kick is applied. Confirmed."
+    },
+    {
+      "title": "run_ensemble has no return statement; returns None while caller treats it as a list",
+      "location": "src/ensemble_runner.py:144",
+      "class": "bug",
+      "severity": "high",
+      "evidence": "run_ensemble's docstring states 'Returns: list: A list of summary dictionaries', but the function body ends at the print on ensemble_runner.py:277 with no `return`, so it returns None. The __main__ block (ensemble_runner.py:460) assigns `ensemble_results = run_ensemble(...)` then iterates `sum(1 for r in ensemble_results ...)` at line 472, which raises TypeError ('NoneType' is not iterable).",
+      "intent_link": "Violates intent (3): the ensemble driver cannot hand its results to detection-rate analysis; documented return contract is broken.",
+      "id": "F007",
+      "status": "survived",
+      "falsifier_note": "run_ensemble (def at ensemble_runner.py:144) ends with the print at line 277 and the next def begins at line 280/282 — no return statement, so it returns None despite the docstring claiming it returns a list. __main__ assigns ensemble_results = run_ensemble(...) (line 460) then at line 472 does `sum(1 for r in ensemble_results ...)`, iterating None → TypeError. Confirmed."
+    },
+    {
+      "title": "Absolute import 'from analytic_impulse import ...' breaks when n_body_simulation is imported as a package module",
+      "location": "src/n_body_simulation.py:4",
+      "class": "bug",
+      "severity": "medium",
+      "evidence": "n_body_simulation.py uses `from analytic_impulse import calculate_velocity_kick, G as analytic_G` (top-level import), while simulation_runner.py:4 and ensemble_runner.py:10-13 import it via package-relative `from . import n_body_simulation`. Under package execution (e.g. `python -m src.ensemble_runner`) the top-level name 'analytic_impulse' is not on sys.path, so importing n_body_simulation raises ModuleNotFoundError unless src happens to be on the path.",
+      "intent_link": "Violates the 'complete, modular computational pipeline' intent — modules cannot be reliably imported together as a package.",
+      "id": "F008",
+      "status": "survived",
+      "falsifier_note": "n_body_simulation.py:4 uses top-level absolute `from analytic_impulse import calculate_velocity_kick, G as analytic_G`, while simulation_runner.py:4 imports it package-relatively (`from . import n_body_simulation`) and ensemble_runner.py:10-13 uses `from . import n_body_simulation`. Under package execution (e.g. `python -m src.ensemble_runner`), 'analytic_impulse' is not a top-level module on sys.path, so importing n_body_simulation raises ModuleNotFoundError unless src/ happens to be on sys.path. Confirmed."
+    },
+    {
+      "title": "add_solar_system swallows exceptions and continues with a possibly empty simulation",
+      "location": "src/n_body_simulation.py:97",
+      "class": "bug",
+      "severity": "medium",
+      "evidence": "The `try/except Exception as e:` around `self.sim.add_solar_system(date=date)` only does `print(f\"Error adding Solar System bodies: {e}\")` (lines 97-99) and neither re-raises nor returns a status. A failed JPL Horizons fetch leaves the simulation with no/partial bodies, and downstream code proceeds as if bodies were added. Comment 'Consider fallback or raising the error' confirms no handling.",
+      "intent_link": "Violates intent (1): a baseline Solar System must exist for residual computation; silently continuing produces invalid baselines.",
+      "id": "F009",
+      "status": "survived",
+      "falsifier_note": "n_body_simulation.py:97-99 confirms `except Exception as e: print(f\"Error adding Solar System bodies: {e}\")` with no re-raise and no status return; comment at line 99 'Consider fallback or raising the error' confirms no handling. A failed add_solar_system leaves a possibly empty sim and execution continues."
+    },
+    {
+      "title": "PBH initial position is a placeholder; t_encounter and proper geometry are ignored",
+      "location": "src/simulation_runner.py:91",
+      "class": "code-intent-mismatch",
+      "severity": "high",
+      "evidence": "Code comments admit the stub: `# Placeholder: Use a dummy position far away initially` and `# TODO: Calculate initial PBH position based on encounter parameters relative to target`. pbh_initial_pos is fixed at [-1000, <default 100>, 0] and the sampled 't_encounter_years' (parameter_sampler.py:116) is never used to place the PBH; apply_analytic_kick computes t_ca purely from this placeholder geometry (n_body_simulation.py:234-244).",
+      "intent_link": "Violates intent (1) 'N-body simulations of PBH encounters using impulse-approximation shortcuts' and the stated Tran et al. methodology — encounter timing/geometry is not actually realized.",
+      "id": "F010",
+      "status": "survived",
+      "falsifier_note": "simulation_runner.py:89-91 contains the literal stub comments 'Placeholder: Use a dummy position far away initially' and the TODO, with pbh_initial_pos = np.array([-1000.0, pbh_params.get('impact_param', 100.0), 0.0]). t_encounter_years from the sampler is never referenced in run_single_simulation. apply_analytic_kick (n_body_simulation.py:234-240) feeds this placeholder pbh_pos into calculate_velocity_kick, so t_ca derives purely from the placeholder geometry."
+    },
+    {
+      "title": "Velocity kick points away from the PBH (sign error in kick direction)",
+      "location": "src/analytic_impulse.py:66",
+      "class": "bug",
+      "severity": "medium",
+      "evidence": "r_ca is the relative position at closest approach computed from `initial_relative_position = pbh_position - body_position` (line 33) and `r_ca = initial_relative_position + relative_velocity * t_ca` (line 48), i.e. it points from the body toward the PBH. Gravity should accelerate the body toward the PBH (along +r_ca), but `kick_direction = -r_ca / b` (line 66) points away from the PBH, so the impulse is applied in the wrong direction.",
+      "intent_link": "Violates intent (1)/(2): the impulse-approximation kick must attract the body toward the PBH path; an inverted kick yields physically wrong residuals.",
+      "id": "F011",
+      "status": "survived",
+      "falsifier_note": "analytic_impulse.py:33 sets initial_relative_position = pbh_position - body_position (body→PBH), line 48 r_ca = that + relative_velocity*t_ca (still body→PBH). Gravity accelerates the body toward the PBH (+r_ca), but line 66 sets kick_direction = -r_ca / b, pointing away from the PBH. Sign error confirmed."
+    },
+    {
+      "title": "JSON serialization of numpy values in summaries/results fails, breaking checkpointing and final output",
+      "location": "src/ensemble_runner.py:136",
+      "class": "bug",
+      "severity": "medium",
+      "evidence": "summary['pbh_params'] is the sampler dict containing a numpy array ('velocity_au_day') and numpy float ('mass_msun') (parameter_sampler.py:112-117). `json.dump(summary, f_sum, indent=4)` (ensemble_runner.py:136), the checkpoint dump (line 249) and the final dump (line 263) all serialize these objects; the standard json encoder cannot serialize numpy ndarray/float64 and raises TypeError. These are caught only by surrounding try/except that print warnings, so per-member summaries, checkpoints, and final aggregated results are not persisted.",
+      "intent_link": "Violates intent (3): ensemble results and checkpoints (needed to compute detection rates and resume long runs) are silently not saved.",
+      "id": "F012",
+      "status": "survived",
+      "falsifier_note": "summary['pbh_params'] (ensemble_runner.py:54) is the sampler dict carrying 'velocity_au_day' (numpy ndarray) and 'mass_msun' (numpy float) from parameter_sampler.py:113-115. json.dump at lines 136, 249, and 263 cannot serialize numpy ndarray/float64 and raises TypeError; the surrounding try/except at 137-138, 251-252, 273-274 only print warnings, so per-member summaries, checkpoints, and final results are not persisted."
+    },
+    {
+      "title": "Particle-count resize in the integration loop is lossy and uses inconsistent initial allocation",
+      "location": "src/simulation_runner.py:151",
+      "class": "design-defect",
+      "severity": "low",
+      "evidence": "After the PBH branch reallocates arrays to num_particles+1 (lines 126-127), the main loop still guards with `if len(current_state) != positions_out.shape[1]:` and reallocates/copies arrays mid-loop (lines 151-161), explicitly noted 'this is inefficient, better to size correctly initially'. The min-shape copy (lines 158-161) silently drops data if shapes shrink and the per-particle bounds check (line 165-169) drops out-of-bounds particles, masking state-array sizing errors instead of failing.",
+      "intent_link": "Weakens intent (1)/(2): reliable per-step state capture is required to compute correct residuals.",
+      "id": "F013",
+      "status": "survived",
+      "falsifier_note": "simulation_runner.py:126-127 reallocates to num_particles+1 in the PBH branch, yet the loop at lines 151-161 still resizes mid-loop with the explicit comment 'this is inefficient, better to size correctly initially'. The min-shape copy (158-161) silently drops data on shrink and the bounds check (165-169) drops out-of-bounds particles, masking sizing errors. Confirmed as a design defect."
+    },
+    {
+      "title": "Stub example advertised as runnable single-flyby demo performs no simulation",
+      "location": "examples/single_flyby_example.py:34",
+      "class": "doc-drift",
+      "severity": "low",
+      "evidence": "The module docstring claims it 'shows how to: 1. Set up a solar system model ... 3. Run the simulation 4. Analyze the results', but the body only prints parameters and then `print(\"\\nThis is a placeholder example. The actual implementation will:\")` — it never imports or calls any src module to run a flyby.",
+      "intent_link": "Mismatch with intent's 'one stub example' / end-to-end usage expectation: the only example does not exercise the pipeline.",
+      "id": "F014",
+      "status": "survived",
+      "falsifier_note": "examples/single_flyby_example.py docstring (lines 4-8) claims it runs the simulation and analyzes results, but the body (lines 20-39) only prints parameters and line 34 prints 'This is a placeholder example. The actual implementation will:'. No src module is imported or called. Doc-drift confirmed."
+    },
+    {
+      "title": "run_ensemble() has no return statement — always returns None",
+      "location": "src/ensemble_runner.py:277",
+      "class": "bug",
+      "severity": "critical",
+      "evidence": "The function body ends at line 277 with `print(f\"\\nEnsemble run finished. {len(results)} members processed.\")` and no `return results` statement. The docstring at line 173 states 'Returns: list: A list of summary dictionaries, one for each completed member.' All callers receive None. In the __main__ block at line 460, `ensemble_results = run_ensemble(...)` assigns None, so the immediately following `sum(1 for r in ensemble_results if ...)` at line 472 raises TypeError: 'NoneType' object is not iterable.",
+      "intent_link": "Intent (3): run large Monte Carlo ensembles to estimate detection rates. The ensemble runner is the top-level orchestrator; returning None instead of results silently destroys all computed outputs.",
+      "id": "F015",
+      "status": "survived",
+      "falsifier_note": "run_ensemble's body ends at line 277 with a print and no `return results`, despite the docstring (line 171-172) promising a list. In __main__ line 460 ensemble_results = run_ensemble(...) is therefore None, and line 472 `sum(1 for r in ensemble_results ...)` raises TypeError: 'NoneType' object is not iterable. Confirmed critical."
+    },
+    {
+      "title": "PBH parameter key mismatch between parameter_sampler and simulation_runner causes KeyError in every perturbed run",
+      "location": "src/simulation_runner.py:84",
+      "class": "bug",
+      "severity": "critical",
+      "evidence": "parameter_sampler.py:112 produces dicts with key 'mass_msun'. simulation_runner.py:84 accesses `pbh_params['mass']` — missing key raises KeyError. Additionally simulation_runner.py:91 calls `pbh_params.get('impact_param', 100.0)` while parameter_sampler.py:114 uses key 'impact_param_au'. ensemble_runner.py:72 passes the sampler output directly to run_parallel_simulations with no key mapping, so every perturbed ensemble member crashes before any simulation runs.",
+      "intent_link": "Intent (1) and (3): N-body simulations of PBH encounters and Monte Carlo ensembles are completely non-functional for any call path that goes parameter_sampler → ensemble_runner → simulation_runner.",
+      "id": "F016",
+      "status": "survived",
+      "falsifier_note": "parameter_sampler.py:113 emits key 'mass_msun' but simulation_runner.py:84 reads pbh_params['mass'] → KeyError. ensemble_runner.py:72 passes the raw sampler dict to run_parallel_simulations with no key remapping, so every perturbed member fails (KeyError caught at simulation_runner.py:180 returns None, then ensemble_runner.py:75-76 raises RuntimeError). Line 91 also uses .get('impact_param', 100.0) vs sampler's 'impact_param_au' (silent fallback). Confirmed."
+    },
+    {
+      "title": "KM_S_TO_AU_DAY conversion constant is wrong by a factor of ~86",
+      "location": "src/parameter_sampler.py:11",
+      "class": "bug",
+      "severity": "critical",
+      "evidence": "Line 11: `KM_S_TO_AU_DAY = 1.0 / 1.731e6 * 86400.0` evaluates to ≈0.04991 AU/day per km/s. The correct conversion using 1 AU = 1.496e8 km, 1 day = 86400 s is 86400/1.496e8 ≈ 5.775e-4 AU/day per km/s. The code's divisor (1.731e6) is ~86× smaller than the correct value (1.496e8), making every sampled PBH velocity ~86× too large. At the default sigma_v=200 km/s, the 1-sigma speed becomes ~9.98 AU/day (≈1.73×10⁴ km/s, about 6% of c) instead of the physically expected ~0.115 AU/day (~200 km/s).",
+      "intent_link": "Intent (3): Monte Carlo detection rate estimates depend on physically realistic velocity sampling. Velocities 86× too large invalidate all sampled encounter geometries and resulting residual statistics.",
+      "id": "F017",
+      "status": "survived",
+      "falsifier_note": "parameter_sampler.py:11 `KM_S_TO_AU_DAY = 1.0 / 1.731e6 * 86400.0` = 86400/1.731e6 ≈ 0.04991 AU/day per km/s. Correct value is 86400/1.496e8 ≈ 5.775e-4. The comment on the same line even cites '1 AU = 1.496e8 km' yet the divisor used is 1.731e6, which is 1.496e8/1.731e6 ≈ 86.4× smaller, inflating sampled velocities ~86×. Confirmed at anchor."
+    },
+    {
+      "title": "Analytic impulse example PBH velocity is ~820× too large — comment and hardcoded value both wrong",
+      "location": "src/analytic_impulse.py:104",
+      "class": "bug",
+      "severity": "high",
+      "evidence": "Lines 104-105: comment says '200 km/s -> 94.8 AU/day -> … ~= 5510 AU/(yr/2pi)'; hardcoded velocity is `[5510.0, 0, 0]`. Correct conversion: 200 km/s × 86400 s/day / 1.496e8 km/AU ≈ 0.1155 AU/day = 0.1155 × VELOCITY_DAY_TO_REBOUND ≈ 6.71 AU/(yr/2π). The hardcoded 5510 AU/(yr/2π) corresponds to ≈94.8 AU/day ≈ 164,000 km/s ≈ 0.55c — highly relativistic, making the impulse approximation (which assumes v_rel ≪ c) physically invalid for this example.",
+      "intent_link": "Intent (2): impulse-approximation shortcuts require physically realistic relative velocities; using 0.55c violates the non-relativistic assumption of the analytic formula.",
+      "id": "F018",
+      "status": "survived",
+      "falsifier_note": "analytic_impulse.py:104-105: comment states '200 km/s -> 94.8 AU/day' and hardcodes `pbh_velocity_example = np.array([5510.0, 0, 0])`. Correct 200 km/s = 200*86400/1.496e8 ≈ 0.1155 AU/day (≈6.71 AU/(yr/2π) via VELOCITY_DAY_TO_REBOUND=365.25/2π). The 94.8 AU/day / 5510 AU/(yr/2π) values are ~820× too large and imply ~0.55c, invalidating the impulse approximation. Confirmed at anchor."
+    },
+    {
+      "title": "n_body_simulation.py uses bare absolute import of analytic_impulse — fails when imported as package",
+      "location": "src/n_body_simulation.py:4",
+      "class": "bug",
+      "severity": "high",
+      "evidence": "Line 4: `from analytic_impulse import calculate_velocity_kick, G as analytic_G` — unconditional absolute import with no try/except fallback. In Python 3, this resolves as a top-level module lookup. When the module is imported via `from src.n_body_simulation import NBodySimulation` (as in tests/test_n_body_simulation.py:13), the project root is in sys.path but src/ is not, so `analytic_impulse` is not findable and raises ModuleNotFoundError. Other modules (simulation_runner.py:4-18, ensemble_runner.py:10-19, synthetic_data.py:6-9) all use try/except relative-then-bare import patterns to handle this; n_body_simulation.py does not.",
+      "intent_link": "Intent (1): the NBodySimulation class is the core simulation engine; an import failure at module load time blocks all N-body simulation.",
+      "id": "F019",
+      "status": "survived",
+      "falsifier_note": "n_body_simulation.py:4 is a bare unconditional absolute import `from analytic_impulse import calculate_velocity_kick, G as analytic_G` with no relative or try/except fallback. tests/test_n_body_simulation.py:13 imports `from src.n_body_simulation import NBodySimulation`; conftest.py:8 and test:9 add only the project root ('..') to sys.path, not src/, so analytic_impulse is unresolvable → ModuleNotFoundError (caught by test try/except at lines 12-16, setting NBODY_AVAILABLE=False). Other modules avoid this: ensemble_runner.py:9-19 and synthetic_data.py:5-9 use try/except relative-then-bare; simulation_runner.py:4-5 uses package-relative `from . import`. The finding's wording about simulation_runner using try/except is slightly imprecise (it uses pure relative imports), but the core claim — n_body_simulation.py's bare import breaks package import while siblings handle it — is confirmed."
+    },
+    {
+      "title": "PBH initial position calculation is a placeholder — perturbed simulations never run a physical encounter",
+      "location": "src/simulation_runner.py:90",
+      "class": "code-intent-mismatch",
+      "severity": "high",
+      "evidence": "Lines 88-91: `# TODO: Calculate initial PBH position based on encounter parameters relative to target` / `pbh_initial_pos = np.array([-1000.0, pbh_params.get('impact_param', 100.0), 0.0]) # Needs proper calculation!`. The y-coordinate is set to the impact parameter scalar (a distance, not a position component). The pseudocode (docs/pseudocode.md:206-228) defines CreatePBHBody() using SphericalToCartesian(r0, theta0, phi0) and VelocityVectorFromAngles(). No such calculation exists; the PBH is always placed at (-1000, b, 0) regardless of encounter geometry.",
+      "intent_link": "Intent (1): N-body simulations of PBH encounters require a physically computed initial PBH position from encounter parameters (r0, theta0, phi0, alpha, beta per paper arXiv:2312.17217v3 Section III).",
+      "id": "F020",
+      "status": "survived",
+      "falsifier_note": "simulation_runner.py:88-91 contains `# TODO: Calculate initial PBH position based on encounter parameters relative to target` and `pbh_initial_pos = np.array([-1000.0, pbh_params.get('impact_param', 100.0), 0.0]) # Needs proper calculation!`. The y-component is set directly to the impact-parameter scalar, with no spherical-to-Cartesian geometry computation; PBH is fixed at (-1000, b, 0) regardless of encounter angles. Confirmed placeholder at anchor."
+    },
+    {
+      "title": "Target body for analytic kick hardcoded as 'body_3' — only works for a specific 4-body setup",
+      "location": "src/simulation_runner.py:104",
+      "class": "design-defect",
+      "severity": "high",
+      "evidence": "Line 104: `target_body_label = \"body_3\" # Assuming Earth is body 3 after Sun, Merc, Venus`. Labels are assigned at lines 48-50 as `[f\"body_{i}\" for i in range(len(masses))]`. If fewer than 4 bodies are used (e.g., the 3-body example in __main__), 'body_3' does not exist and apply_analytic_kick() returns False silently. No mechanism is provided to specify the target body via pbh_params or arguments.",
+      "intent_link": "Intent (1): the Solar System simulation should apply kicks to the correct bodies. Hardcoding 'body_3' prevents generalization to arbitrary Solar System configurations.",
+      "id": "F021",
+      "status": "survived",
+      "falsifier_note": "simulation_runner.py:104 `target_body_label = \"body_3\" # Assuming Earth is body 3 after Sun, Merc, Venus`. Labels assigned at line 48 as `[f\"body_{i}\" for i in range(len(masses))]`. With <4 bodies, 'body_3' does not exist; no argument/pbh_params mechanism to override the target. Confirmed hardcoded at anchor."
+    },
+    {
+      "title": "q_fom figure-of-merit (paper Eq. 17) is entirely unimplemented — core detection metric missing",
+      "location": "src/residual_analysis.py:233",
+      "class": "code-intent-mismatch",
+      "severity": "high",
+      "evidence": "Lines 233-240 show commented-out stubs only: `# def calculate_observables(positions, velocities): / #     pass` and `# def calculate_q_fom(residuals_observables): / #     pass`. README.md:53 Feature #4 states 'Evaluate figure-of-merit q_fom for detection'. docs/pseudocode.md:315-338 provides a complete ComputeQFOM() specification based on paper Eq. (17). ensemble_runner.py is_detected() and calculate_detection_rates() use peak position residual as a crude proxy threshold rather than q_fom. The actual detection criterion from Tran et al. is absent.",
+      "intent_link": "Intent (3): Monte Carlo detection rate estimation requires q_fom (Eq. 17 of arXiv:2312.17217v3) as the detection statistic; the substitute threshold on raw peak AU residual is not the paper's methodology.",
+      "id": "F022",
+      "status": "survived",
+      "falsifier_note": "residual_analysis.py:233-240 contains only commented-out stubs: `# def calculate_observables(...)` / `#     pass` and `# def calculate_q_fom(residuals_observables): ... #     pass`. q_fom is entirely unimplemented; only RMS/peak helpers exist (calculate_rms at line 245). Core claim that the paper Eq.17 figure-of-merit detection metric is absent is confirmed at the anchor."
+    },
+    {
+      "title": "README project structure lists wrong module names not present in the repository",
+      "location": "README.md:128",
+      "class": "doc-drift",
+      "severity": "high",
+      "evidence": "README.md:128-131 shows: `src/nbody.py`, `src/pbhsampler.py`, `src/residuals.py`, `src/parameter_recovery.py`. Actual source files are `src/n_body_simulation.py`, `src/parameter_sampler.py`, `src/residual_analysis.py`. No `parameter_recovery.py` exists. README also shows `scripts/single_flyby.py`, `scripts/ensemble_flyby.py`, `scripts/param_recovery.py` (lines 134-137) and `examples/SingleFlyby.ipynb` (line 139) — none of these exist in the repository.",
+      "intent_link": "The project intends to be a usable framework for researchers; a README directing users to non-existent files and scripts defeats first-contact usability.",
+      "id": "F023",
+      "status": "survived",
+      "falsifier_note": "README.md:128-132 lists `src/nbody.py`, `src/pbhsampler.py`, `src/residuals.py`, `src/parameter_recovery.py`; lines 134-136 list `scripts/single_flyby.py`, `scripts/ensemble_flyby.py`, `scripts/param_recovery.py`; line 138 lists `examples/SingleFlyby.ipynb`. None match the actual source files (n_body_simulation.py, parameter_sampler.py, residual_analysis.py) and no scripts/ dir or .ipynb exist per the audit inventory. Confirmed at anchor."
+    },
+    {
+      "title": "README Usage section references non-existent CLI scripts with flags that match no implemented interface",
+      "location": "README.md:98",
+      "class": "doc-drift",
+      "severity": "high",
+      "evidence": "README.md:98-113 specifies three commands: `python scripts/single_flyby.py --mass 1e-9 --r0 450 --alpha 0.004 --beta 3.1415`, `python scripts/ensemble_flyby.py --n 100000 --mass-base 1e-6`, `python scripts/param_recovery.py --input residual_data.npz`. No `scripts/` directory exists; the only runnable example is `examples/single_flyby_example.py` which itself is a stub (line 34: 'This is a placeholder example'). The flags `--r0`, `--alpha`, `--beta` correspond to encounter-geometry parameters that are not implemented in any module.",
+      "intent_link": "The project claims to enable researchers to run simulations; the documented interface is entirely fictional.",
+      "id": "F024",
+      "status": "survived",
+      "falsifier_note": "README.md:98-113 specifies `python scripts/single_flyby.py --mass 1e-9 --r0 450 --alpha 0.004 --beta 3.1415`, `scripts/ensemble_flyby.py --n 100000 --mass-base 1e-6`, and `scripts/param_recovery.py --input residual_data.npz`. No scripts/ directory exists; the only example, examples/single_flyby_example.py:34, prints 'This is a placeholder example.' The --r0/--alpha/--beta geometry flags map to no implemented interface. Confirmed at anchor."
+    },
+    {
+      "title": "examples/single_flyby_example.py is a non-functional stub — prints placeholder text instead of running simulation",
+      "location": "examples/single_flyby_example.py:34",
+      "class": "code-intent-mismatch",
+      "severity": "high",
+      "evidence": "Line 34: `print(\"\\nThis is a placeholder example. The actual implementation will:\")` — the entire function body consists of `print()` calls describing what will be done, with no imports of or calls to any simulation module (n_body_simulation, simulation_runner, analytic_impulse, etc.). README.md:115 directs users to the examples/ directory for 'a guided walkthrough'.",
+      "intent_link": "Intent (1): the example is the primary user-facing demonstration of running an N-body PBH flyby simulation.",
+      "id": "F025",
+      "status": "survived",
+      "falsifier_note": "examples/single_flyby_example.py:34 reads `print(\"\\nThis is a placeholder example. The actual implementation will:\")` followed by lines 35-39 enumerating future steps. The entire function (lines 18-42) only prints parameter values and placeholder text; it imports no simulation module (only sys/os at lines 11-12) and calls no n_body_simulation/simulation_runner/analytic_impulse function. It is a non-functional stub."
+    },
+    {
+      "title": "eval() used to deserialize untrusted metadata from .npz files — code injection risk",
+      "location": "src/residual_analysis.py:215",
+      "class": "security",
+      "severity": "medium",
+      "evidence": "Line 215: `metadata = eval(metadata_str) # Use eval carefully! Assumes trusted source.` The metadata string was stored as `str({...})` at save_residuals line 148 and is loaded back with `allow_pickle=True` at line 206. eval() on a crafted .npz file's metadata field executes arbitrary Python. The comment acknowledges the risk but provides no safe alternative (e.g., ast.literal_eval or json.loads).",
+      "intent_link": "Intent (4): synthetic observations are loaded from .npz files for parameter recovery testing; any external or shared .npz file becomes a code-injection vector.",
+      "id": "F026",
+      "status": "survived",
+      "falsifier_note": "src/residual_analysis.py:215 is `metadata = eval(metadata_str) # Use eval carefully! Assumes trusted source.` The string originates from `str(meta_str_dict)` at save line 148 and is reloaded via `np.load(..., allow_pickle=True)` at line 206 then `data['metadata'].item()` at line 214. A crafted .npz metadata field is passed to eval() with no ast.literal_eval/json safeguard — arbitrary code execution risk confirmed."
+    },
+    {
+      "title": "residual_analysis.py __main__ block: stats calculation is inside the failure (else) branch — dead code on success",
+      "location": "src/residual_analysis.py:395",
+      "class": "bug",
+      "severity": "medium",
+      "evidence": "Lines 363-410: `if res_t is not None and res_p is not None and res_v is not None:` block handles successful computation (save/load). The `else:` block at line 395 prints 'Residual computation failed (returned None).' and then at line 398 calls `calculate_residual_stats(res_p, res_v)` — but at this point res_p and res_v are None since residual computation failed. The stats calculation never runs when residuals are successfully computed; it runs only on failure, where it calls stats on None inputs.",
+      "intent_link": "Intent (2): the __main__ demonstration of residual statistics is a key validation of the analysis pipeline; the inverted branch means the stats example is unreachable in the success path.",
+      "id": "F027",
+      "status": "survived",
+      "falsifier_note": "src/residual_analysis.py: success path is the `if res_t/res_p/res_v is not None` block (lines 363-392) which only saves/loads. The `else:` branch (line 394-410, entered precisely when residuals are None) prints the failure message at 395 then calls `calculate_residual_stats(res_p, res_v)` at line 399 — with res_p and res_v guaranteed None. Stats never run on success and run only on failure with None inputs, exactly as described."
+    },
+    {
+      "title": "visualization.py calls plt.show() unconditionally in every plot function — blocks headless batch execution",
+      "location": "src/visualization.py:76",
+      "class": "design-defect",
+      "severity": "medium",
+      "evidence": "plt.show() is called unconditionally at: line 76 (plot_trajectories_2d), line 175 (plot_residual_timeseries), line 314 (plot_detection_scatter), line 384 (plot_binned_detection_rate). In server or batch ensemble contexts (which the ensemble_runner is designed for), plt.show() either raises a display error or blocks execution waiting for GUI interaction. No `show=True` parameter or guard is provided.",
+      "intent_link": "Intent (3): visualization is expected to operate alongside large ensemble runs; unconditional plt.show() makes the module unusable in the primary production context.",
+      "id": "F028",
+      "status": "survived",
+      "falsifier_note": "Grep of src/visualization.py confirms unconditional `plt.show()` calls at lines 76, 175, 314, and 384 — matching the four plot functions cited. No show=True parameter or headless guard precedes them; in the batch/server context the ensemble_runner targets this blocks or errors."
+    },
+    {
+      "title": "setup.py declares pytest and pytest-cov in install_requires — test tools become mandatory runtime dependencies",
+      "location": "setup.py:14",
+      "class": "design-defect",
+      "severity": "medium",
+      "evidence": "setup.py lines 14-15: `\"pytest\"`, `\"pytest-cov\"` appear inside `install_requires=[...]`. Test frameworks are development/CI dependencies; placing them in install_requires forces every `pip install primordial_encounters` (including in production simulation environments) to also install pytest. Correct placement is `extras_require={'dev': ['pytest', 'pytest-cov']}`.",
+      "intent_link": "Packaging correctness is part of providing a usable research framework.",
+      "id": "F029",
+      "status": "survived",
+      "falsifier_note": "setup.py lines 10-17: `install_requires=[...]` contains \"pytest\" (line 15) and \"pytest-cov\" (line 16). Test frameworks are placed as mandatory runtime dependencies rather than under extras_require, confirming the finding."
+    },
+    {
+      "title": "setup.py find_packages() will not find src/ — package name 'primordial_encounters' matches no directory",
+      "location": "setup.py:9",
+      "class": "design-defect",
+      "severity": "medium",
+      "evidence": "setup.py:8-9: `packages=find_packages()` requires `__init__.py` in each package directory. There is no `src/__init__.py` in the repository surface (only `tests/__init__.py` exists). find_packages() discovers only `tests`. The declared `name='primordial_encounters'` matches no directory; the actual code lives in `src/`. A pip-installed package would contain only the tests module and none of the simulation code.",
+      "intent_link": "The project intends to be pip-installable as 'primordial_encounters'; the setup.py cannot produce a functioning installation.",
+      "id": "F030",
+      "status": "survived",
+      "falsifier_note": "setup.py:9 uses `packages=find_packages()` with no package_dir mapping. Glob for src/__init__.py returns no files, so find_packages() discovers only the tests package (tests/__init__.py exists). The declared name 'primordial_encounters' (line 7) maps to no directory and the src/ simulation code would be excluded from an installed package."
+    },
+    {
+      "title": "Parameter recovery feature documented in README but no module exists",
+      "location": "README.md:53",
+      "class": "doc-drift",
+      "severity": "medium",
+      "evidence": "README.md:53-57 Feature #5: 'Parameter Recovery & Statistical Testing — Recover PBH mass and trajectory from synthetic observed orbital perturbations — Perform likelihood ratio tests vs. a no PBH null hypothesis'. docs/pseudocode.md:429-475 provides a complete RecoverPBHParameters() specification. No `parameter_recovery.py` or equivalent exists in src/. synthetic_data.py adds noise to residuals but performs no fitting or hypothesis testing.",
+      "intent_link": "Intent (4): parameter recovery testing is listed as a primary goal of the project.",
+      "id": "F031",
+      "status": "survived",
+      "falsifier_note": "README.md:54-56 documents Feature #5 'Parameter Recovery & Statistical Testing' (recover PBH mass, likelihood ratio tests). Glob shows no parameter_recovery.py among the 8 src/*.py files, and a case-insensitive grep for recover/likelihood/null hypothesis across src/ returns no matches. synthetic_data.py exists but contains no fitting/hypothesis-testing code. The cited :53 is one line off the header but the documented feature block is present and unimplemented."
+    },
+    {
+      "title": "Spectral analysis feature documented in README and pseudocode but no module exists",
+      "location": "README.md:58",
+      "class": "doc-drift",
+      "severity": "medium",
+      "evidence": "README.md:58-61 Feature #6: 'Spectral Analysis (Optional) — Fourier methods to confirm the near-monochromatic nature of orbital deviations'. docs/pseudocode.md:282-308 specifies ComputePowerSpectrum() and AnalyzeResidualSpectrum(). No FFT/spectral analysis code exists in any src/ module.",
+      "intent_link": "Intent (2): the paper's Figure 3 right panel shows spectral analysis of residuals; replicating this result requires the missing spectral module.",
+      "id": "F032",
+      "status": "survived",
+      "falsifier_note": "README.md:58-60 documents Feature #6 'Spectral Analysis (Optional)' with Fourier methods. A case-insensitive grep for fft/fourier/spectr/power_spectrum/periodogram across all src/ modules returns no matches, confirming no spectral/FFT module exists despite the documentation and pseudocode spec."
+    },
+    {
+      "title": "README references MIT LICENSE file that does not exist",
+      "location": "README.md:159",
+      "class": "doc-drift",
+      "severity": "medium",
+      "evidence": "README.md:159: 'This project is offered under the MIT License(LICENSE).' — hyperlink points to a LICENSE file. No LICENSE file appears in the repository surface. The repository has no license declaration, making the legal status of the code ambiguous.",
+      "intent_link": "A research framework intended for public use requires a valid license file to be legally usable by others.",
+      "id": "F033",
+      "status": "survived",
+      "falsifier_note": "README.md:160 (finding cites 159, off-by-one but the content is at 160) reads 'This project is offered under the [MIT License](LICENSE).' — a markdown hyperlink to a LICENSE file. Glob for LICENSE* in the repo returns no files, so the linked LICENSE does not exist and the repo carries no license declaration. Doc-drift confirmed."
+    },
+    {
+      "title": "test_initialization is a bare pass — no physics correctness tests exist anywhere in the test suite",
+      "location": "tests/test_n_body_simulation.py:23",
+      "class": "code-intent-mismatch",
+      "severity": "medium",
+      "evidence": "test_n_body_simulation.py:23-27: `def test_initialization(self): / pass` — decorated with @unittest.skipIf but body is pass regardless. test_project_structure() at line 29 only checks that four directories exist. No test covers: calculate_velocity_kick() accuracy, residual computation correctness, parameter sampling distributions, detection rate calculation, or any numerical physics result. pytest.ini defines testpaths=tests but there are no tests for any src/ module beyond directory-existence checks.",
+      "intent_link": "The project intends to replicate the methodology of Tran et al.; without tests verifying numerical correctness, any physics bug (like the velocity conversion errors) goes undetected.",
+      "id": "F034",
+      "status": "survived",
+      "falsifier_note": "tests/test_n_body_simulation.py:22-27: test_initialization is decorated @unittest.skipIf and its body is a bare `pass`. test_project_structure (lines 29-40) only asserts four directories exist via os.path.isdir. No test in the file exercises calculate_velocity_kick, residual computation, sampling distributions, or any numerical physics result. It is the only test file in tests/, so no physics-correctness test exists in the suite."
+    },
+    {
+      "title": "parameter_sampler.py imports scipy.stats but never calls any scipy function",
+      "location": "src/parameter_sampler.py:2",
+      "class": "other",
+      "severity": "low",
+      "evidence": "Line 2: `import scipy.stats as stats`. No reference to `stats.` appears anywhere in the file. All sampling uses np.random (np.random.uniform, np.random.normal). scipy is listed as a required dependency in requirements.txt, adding a heavy dependency for zero benefit in this module.",
+      "intent_link": "Clean dependency management for a scientific computing package.",
+      "id": "F035",
+      "status": "survived",
+      "falsifier_note": "parameter_sampler.py:2 imports `scipy.stats as stats`. I read the entire file (162 lines): no `stats.` reference appears anywhere; all sampling uses np.random.uniform / np.random.normal (lines 25, 41, 60-62, 83). scipy is a declared dependency (requirements.txt:4, setup.py:13) but unused in this module."
+    },
+    {
+      "title": "FORMAT_CSV constant is defined but save_residuals always returns False for CSV format",
+      "location": "src/residual_analysis.py:6",
+      "class": "doc-drift",
+      "severity": "low",
+      "evidence": "residual_analysis.py:6: `FORMAT_CSV = 'csv'`. save_residuals() lines 154-177: the CSV branch prints 'Warning: CSV saving is not yet implemented' and `return False`. The constant is exported as part of the public API (used in save_residuals signature default), misleading callers into thinking CSV is a supported format option.",
+      "intent_link": "API contract: exported constants should represent supported functionality.",
+      "id": "F036",
+      "status": "survived",
+      "falsifier_note": "residual_analysis.py:6 defines FORMAT_CSV='csv'. The CSV branch (lines 154-177) prints 'Warning: CSV saving is not yet implemented' (line 158) and unconditionally `return False` (line 177); the real implementation is commented out. The constant is a module-level public name a caller can pass as format=. Core defect upheld. Minor inaccuracy in the finding's parenthetical: the save_residuals signature default is FORMAT_NPZ, not FORMAT_CSV (line 114: `format=FORMAT_NPZ`); this does not affect the substantive claim."
+    },
+    {
+      "title": "parameter_sampler.generate_pbh_sample does not sample PBH initial-position angles — encounter geometry is incomplete",
+      "location": "src/parameter_sampler.py:85",
+      "class": "design-defect",
+      "severity": "high",
+      "evidence": "generate_pbh_sample() returns dicts with keys: 'mass_msun', 'impact_param_au', 'velocity_au_day', 't_encounter_years'. docs/pseudocode.md:201-228 specifies CreatePBHBody() requires: r0 (initial radial distance), theta0, phi0 (approach direction angles), alpha, beta (velocity orientation angles). None of these are sampled. Without initial position angles, the PBH position cannot be computed from encounter parameters (confirmed by the placeholder at simulation_runner.py:90-91).",
+      "intent_link": "Intent (1) and (3): physically meaningful N-body simulation of a PBH encounter requires fully specifying the encounter geometry in 3D; the sampler produces incomplete parameter sets.",
+      "id": "F037",
+      "status": "survived",
+      "falsifier_note": "generate_pbh_sample (parameter_sampler.py:85-120) returns dicts with exactly keys 'mass_msun','impact_param_au','velocity_au_day','t_encounter_years' (lines 112-117). docs/pseudocode.md:198-228 CreatePBHBody requires r0, theta0, phi0 (lines 202-203) and alpha, beta (line 204) to set the PBH's initial Cartesian position. None are sampled. simulation_runner.py:90-91 confirms the consequence: a hardcoded placeholder position with a 'Needs proper calculation!' comment. Design defect confirmed."
+    },
+    {
+      "title": "Nested multiprocessing: ensemble pool workers attempt to spawn a second Pool — AssertionError on every perturbed run",
+      "location": "src/ensemble_runner.py:64",
+      "class": "bug",
+      "severity": "critical",
+      "evidence": "run_ensemble (line 238) submits run_ensemble_member tasks to a multiprocessing.Pool; pool workers run as daemon processes. run_ensemble_member line 64 calls simulation_runner.run_parallel_simulations, which creates another multiprocessing.Pool at simulation_runner.py:228. Python raises 'AssertionError: daemonic processes are not allowed to have children' whenever a daemon process attempts to spawn a Pool. This makes every perturbed ensemble member fail immediately, rendering the entire ensemble pipeline non-functional.",
+      "intent_link": "The project intends to run large Monte Carlo ensemble simulations (millions of flyby samples); nested pool creation aborts every perturbed member before any N-body work begins.",
+      "id": "F038",
+      "status": "survived",
+      "falsifier_note": "run_ensemble submits run_ensemble_member to multiprocessing.Pool (ensemble_runner.py:238, imap_unordered at 241). Pool workers are daemonic by default. run_ensemble_member:64 calls simulation_runner.run_parallel_simulations always passing pbh_params (line 72), so run_parallel_simulations always takes the parallel branch and constructs a second multiprocessing.Pool (simulation_runner.py:228). A daemon process spawning a Pool raises 'AssertionError: daemonic processes are not allowed to have children'. The try/except in run_ensemble_member (line 61) catches it and marks the member 'failed', so every member fails — pipeline non-functional. Critical severity justified."
+    },
+    {
+      "title": "tqdm imported unconditionally at module level but absent from requirements.txt — ModuleNotFoundError on any fresh install",
+      "location": "src/ensemble_runner.py:6",
+      "class": "bug",
+      "severity": "high",
+      "evidence": "Line 6: 'from tqdm import tqdm' is a bare unconditional top-level import with no try/except fallback. tqdm is absent from requirements.txt (which lists rebound, numpy, scipy, matplotlib, jupyter, emcee, dynesty) and from setup.py install_requires. Any environment built from the declared dependencies raises ModuleNotFoundError at import time, making ensemble_runner completely unavailable without an undocumented extra install step.",
+      "intent_link": "The project intends to run large ensemble simulations; the ensemble runner must be importable from a standard requirements-based install.",
+      "id": "F039",
+      "status": "survived",
+      "falsifier_note": "ensemble_runner.py:6 is `from tqdm import tqdm` — a bare unconditional top-level import (no try/except; comment '# Optional' is misleading since the import is mandatory and tqdm is used at line 241). requirements.txt lists only rebound, numpy, scipy, matplotlib, jupyter, emcee, dynesty (no tqdm). setup.py install_requires (lines 10-17) lists numpy, matplotlib, scipy, rebound, pytest, pytest-cov (no tqdm). A fresh install from declared deps raises ModuleNotFoundError on import."
+    },
+    {
+      "title": "PBH added to N-body simulation with full gravitational mass AND analytic impulse kick also applied — perturbation double-counted",
+      "location": "src/simulation_runner.py:94",
+      "class": "bug",
+      "severity": "high",
+      "evidence": "Lines 94-99 add the PBH as a live REBOUND particle with its full mass (pbh_mass). apply_analytic_kick (line 111) then integrates the full N-body system from t_start to t_ca — during which the PBH's real gravitational mass continuously attracts all bodies — and then applies the full analytic impulse delta_v at t_ca (which represents the total integrated effect of a complete flyby from −∞ to +∞). After the kick the PBH remains in the simulation with full mass through [t_ca, t_end]. The PBH perturbation is thus counted three times: N-body on approach, the full analytic kick, and N-body on departure. The impulse approximation requires that the single kick captures the entire effect; the PBH must not simultaneously exert live N-body forces.",
+      "intent_link": "The project intends to use the impulse approximation as a computational shortcut for PBH encounters, replicating Tran et al.; using both N-body and analytic kick on the same run is contradictory and physically wrong.",
+      "id": "F040",
+      "status": "survived",
+      "falsifier_note": "simulation_runner.py:94-99 adds the PBH as a live REBOUND particle with full pbh_mass. apply_analytic_kick (line 111) integrates the system to t_ca internally (comment lines 107-116) — during which the live full-mass PBH exerts N-body gravity on approach — then applies the full analytic impulse. The PBH is never removed, so the main integration loop (line 143+) continues to t_end with the full-mass PBH still exerting forces on departure. The impulse approximation requires the single kick to capture the entire flyby effect; simultaneously running the PBH as a live gravitational body double/triple-counts the perturbation. Physics design defect confirmed."
+    },
+    {
+      "title": "Perturbed simulation pre-encounter state (t_start) permanently lost when output arrays are reallocated after kick",
+      "location": "src/simulation_runner.py:126",
+      "class": "bug",
+      "severity": "high",
+      "evidence": "Lines 67-75 store the initial state at t=t_start into positions_out[0] and velocities_out[0] for len(masses) particles. When pbh_params is present, lines 126-127 reallocate positions_out and velocities_out to new zero arrays of shape (n_steps+1, len(masses)+1, 3), discarding the old arrays and their row-0 contents entirely. Lines 130-133 then overwrite times_out[0] with t_ca (the post-kick time) and fill the new positions_out[0] with the post-kick state at t_ca — not t_start. The perturbed trajectory output therefore begins at t_ca, not t_start. compute_residuals (residual_analysis.py:98) uses np.interp which silently clips to boundary values for query times before the perturbed array's first time point, making residuals for [t_start, t_ca] silently wrong.",
+      "intent_link": "The project intends to compute full-window orbital residuals between baseline and perturbed trajectories; losing the perturbed pre-encounter state corrupts the residual time series.",
+      "id": "F041",
+      "status": "survived",
+      "falsifier_note": "Confirmed at src/simulation_runner.py. Lines 67-75 capture the t_start state into positions_out[0]/velocities_out[0]. When pbh_params is truthy, lines 126-127 reassign positions_out and velocities_out to fresh np.zeros arrays, discarding the old row-0 contents. Line 130 overwrites times_out[0] with sim_instance.get_simulation_time() (the post-kick time t_ca, since apply_analytic_kick integrates to and leaves the sim at t_ca per n_body_simulation.py:203-204), and lines 131-133 fill positions_out[0]/velocities_out[0] with the post-kick state. The main loop (143-167) continues from t_ca, so the perturbed output begins at t_ca, not t_start. compute_residuals (residual_analysis.py:98) then np.interp-clips for query times < t_ca. Defect is real and high severity."
+    },
+    {
+      "title": "compute_residuals uses np.interp which silently clips to boundary values when time ranges do not fully overlap — produces wrong residuals without warning",
+      "location": "src/residual_analysis.py:98",
+      "class": "bug",
+      "severity": "medium",
+      "evidence": "Lines 98-99: np.interp(residual_times, pert_times, pert_pos[:, particle_idx, dim]) with no range-overlap check. Per NumPy documentation np.interp extrapolates by returning the first or last value when query points fall outside the interpolation range. If base_times extends beyond pert_times (structurally guaranteed when the perturbed run starts at t_ca as described in the output-array reallocation bug), residuals for out-of-range steps use a constant boundary value, silently producing incorrect residuals. The only guard (line 86) checks for identical arrays, not range overlap.",
+      "intent_link": "The project intends residual computation to be the primary observable for PBH detection; silently wrong residuals directly corrupt detection rate estimates.",
+      "id": "F042",
+      "status": "survived",
+      "falsifier_note": "Confirmed at src/residual_analysis.py:98-99. np.interp is called with no range-overlap check; the only guard (line 86) tests for identical arrays. NumPy's np.interp does not extrapolate — it returns the boundary (first/last) y-value for query points outside [pert_times[0], pert_times[-1]], silently yielding constant, incorrect residuals where base_times extends beyond pert_times. Structurally triggered by the F041 t_ca start-time shift. Upheld."
+    },
+    {
+      "title": "dt_rebound set to None when dt_years is falsy; integration loop unconditionally dereferences it causing TypeError",
+      "location": "src/simulation_runner.py:38",
+      "class": "bug",
+      "severity": "low",
+      "evidence": "Line 38: dt_rebound = dt_years * 2 * np.pi if dt_years else None uses a truthy check, equating dt_years=0.0 with None. If dt_rebound is None, line 144 computes next_time_rebound = min(sim_instance.sim.t + dt_rebound, target_rebound_time), raising TypeError: unsupported operand type(s) for +: 'float' and 'NoneType'. Line 65 correctly handles the falsy case for n_steps but the loop body does not. The docstring (line 21) implies dt_years may be omitted for adaptive integrators, making this a reachable crash path.",
+      "intent_link": "Adaptive integrators (ias15) do not require a fixed timestep; callers following the docstring that omit or zero dt_years hit an unguarded crash.",
+      "id": "F043",
+      "status": "survived",
+      "falsifier_note": "Confirmed at src/simulation_runner.py:38: 'dt_rebound = dt_years * 2 * np.pi if dt_years else None' — a truthy test that maps dt_years=0.0/None to None. Line 65 separately guards n_steps (defaults to 100 when falsy), so the while loop at line 143 is entered, and line 144 'min(sim_instance.sim.t + dt_rebound, target_rebound_time)' dereferences dt_rebound, raising TypeError for float + NoneType. Reachable crash path. Upheld (low severity reasonable since callers normally pass a positive dt)."
+    },
+    {
+      "title": "apply_analytic_kick docstring states simulation must be at t=0 but implementation uses current simulation time — misleading contract",
+      "location": "src/n_body_simulation.py:201",
+      "class": "doc-drift",
+      "severity": "info",
+      "evidence": "The method docstring (lines 201-208) reads 'Assumes the simulation is at the initial time (t=0) where initial positions/velocities are used for the kick calculation.' The implementation (line 215 comment) contradicts this: 'We calculate the kick based on the state at the *current* simulation time.' The code uses self.get_simulation_time() and self.sim.t — the current time, not necessarily zero. This misleads callers who may assume the method can only be called at t=0, preventing correct use in multi-phase pipelines where apply_analytic_kick might be called mid-simulation.",
+      "intent_link": "Accurate API documentation is essential for researchers composing multi-phase simulation pipelines involving pre-encounter integration followed by kick application.",
+      "id": "F044",
+      "status": "survived",
+      "falsifier_note": "Confirmed doc-drift at src/n_body_simulation.py. Docstring lines 202-203 state 'Assumes the simulation is at the initial time (t=0) where initial positions/velocities are used for the kick calculation.' The implementation contradicts this: line 214 reads initial_time_years = self.get_simulation_time(), the inline comment line 215 says 'state at the *current* simulation time', and line 243 uses self.sim.t (current time) for t_ca_absolute. The method works at the current time, not necessarily t=0. Upheld (info)."
+    },
+    {
+      "title": "visualization.py and synthetic_data.py __main__ blocks use bare (non-relative) imports incompatible with package-mode execution",
+      "location": "src/visualization.py:510",
+      "class": "design-defect",
+      "severity": "low",
+      "evidence": "visualization.py line 510 inside __main__: 'from ensemble_runner import calculate_detection_rates'. synthetic_data.py line 156 inside __main__ try block: 'import visualization'. Both are bare absolute imports. When these modules are imported as part of the src package (e.g., python -m src.visualization), the bare names are not resolvable via the package namespace; they require src/ to be on sys.path directly. In synthetic_data.py the ImportError is silently swallowed at line 174, skipping the comparison plot. In visualization.py the except ImportError at line 528 silently skips the binned rate example. This is the same class of defect as the already-flagged bare import in n_body_simulation.py:4 but at two additional uncovered locations.",
+      "intent_link": "The project intends src/ modules to work both as importable package members and as standalone demonstration scripts; bare imports in __main__ blocks break the package execution path silently.",
+      "id": "F045",
+      "status": "survived",
+      "falsifier_note": "Confirmed at both anchors. visualization.py:510 inside the __main__ try block: 'from ensemble_runner import calculate_detection_rates' (bare absolute import), with 'except ImportError' silently skipping at line 528-529. synthetic_data.py:156 inside the __main__ try block: 'import visualization' (bare), with 'except ImportError' silently swallowing at line 174-175. Under package-mode execution (python -m src.visualization), the package dir is not on sys.path so these bare names are unresolvable and the ImportError is silently swallowed, skipping the examples. Same class as the n_body_simulation.py bare-import defect. Upheld."
+    },
+    {
+      "title": "calculate_detection_rates inflates total_completed denominator with unclassifiable members, biasing detection rate toward zero",
+      "location": "src/ensemble_runner.py:367",
+      "class": "bug",
+      "severity": "high",
+      "evidence": "At line 367, `total_completed += 1` is executed unconditionally for every member with `status=='completed'`. At line 368, `is_detected(...)` is called, which returns `None` when stats are missing or invalid. Line 371 checks `if detected is None: continue`, skipping the member from `total_detected` AND from bin counts — but NOT reversing the `total_completed` increment already taken. The overall rate at line 394 is `total_detected / total_completed`, where `total_completed` includes unclassifiable members that contribute neither to the numerator nor to any bin. Separately, members with valid detection status whose mass falls outside `mass_bins` are counted in `total_completed` but not in any `totals_by_bin`, making the overall rate inconsistent with the sum of binned rates.",
+      "intent_link": "The project intends to estimate detection rates as a function of PBH mass from Monte Carlo ensembles. A biased denominator silently underestimates detection rates, corrupting the primary scientific output.",
+      "id": "F046",
+      "status": "survived",
+      "falsifier_note": "Confirmed at src/ensemble_runner.py. Line 367 'total_completed += 1' executes unconditionally for every status=='completed' member, BEFORE the is_detected call at line 368. When is_detected returns None (missing/invalid stats), line 370-372 'if detected is None: continue' skips the member from total_detected and bin counts but does NOT decrement total_completed. Line 394 computes overall_rate = total_detected/total_completed with an inflated denominator. Additionally, members with valid status whose mass falls outside mass_bins pass the digitize range check at line 385 (0<=bin_index<num_bins) and are excluded from totals_by_bin while still counted in total_completed, making the overall rate inconsistent with the binned rates. Upheld, high."
+    },
+    {
+      "title": "plot_residual_timeseries uses residuals-array-local indices to index a labels list documented as indexed by original particle indices, mislabeling every plotted line",
+      "location": "src/visualization.py:137",
+      "class": "bug",
+      "severity": "medium",
+      "evidence": "At line 127, `valid_indices` is built as `[idx for idx in particle_indices if 0 <= idx < n_particles_res]` — these are 0-based positions in the *residuals* array. At line 137, `plot_labels = [labels[idx] for idx in valid_indices]` indexes the caller-supplied `labels` list using those same residuals-array positions. The docstring (line 97-98) documents `labels` as 'corresponding to the *original* particle indices before potential selection via particle_indices.' When residuals represent a subset that does not start at particle 0 (e.g., Earth+Jupiter after excluding the Sun), `valid_indices` are residuals indices 0,1,... while the correct labels are at `labels[original_idx]`. The `__main__` example at line 443-451 demonstrates the bug: `res_p_eg` holds Earth and PlanetX residuals (original particles 1 and 2), `particle_indices=[0,1]`, `labels=['Sun','Earth','PlanetX']`; the function assigns labels 'Sun' and 'Earth' instead of 'Earth' and 'PlanetX'.",
+      "intent_link": "The project intends to generate publication-quality visualizations of orbital residuals. Systematically mislabeled residual time-series plots corrupt any analysis or figure derived from them.",
+      "id": "F047",
+      "status": "survived",
+      "falsifier_note": "Confirmed at src/visualization.py. Line 127 builds valid_indices as positions within the residuals array (0..n_particles_res-1). Line 137 'plot_labels = [labels[idx] for idx in valid_indices]' indexes the caller's labels list with those residuals-array positions, while the docstring lines 96-98 documents labels as indexed by ORIGINAL particle indices. The __main__ example (lines 444-452) demonstrates the bug: res_p_eg holds Earth+PlanetX residuals (original particles 1,2), particle_indices=[0,1], labels=['Sun','Earth','PlanetX'] -> plot_labels=['Sun','Earth'] instead of the correct ['Earth','PlanetX']. Mislabeling confirmed. Upheld, medium."
+    },
+    {
+      "title": "is_detected computes norm of per-dimension temporal peak values, overestimating true peak 3D displacement and producing false positive detections",
+      "location": "src/ensemble_runner.py:316",
+      "class": "bug",
+      "severity": "medium",
+      "evidence": "At line 316, `peak_residual_magnitude = np.linalg.norm(pos_peak_au[target_particle_idx, :])`. The array `pos_peak_au` is the output of `calculate_peak` (residual_analysis.py:293: `np.max(np.abs(data_residuals), axis=0)`), so each element is the temporal maximum for one dimension independently. These per-dimension maxima occur at different time steps. The Euclidean norm of `[max_x, max_y, max_z]` gives `sqrt(max_x^2 + max_y^2 + max_z^2)`, which is strictly >= the true peak 3D magnitude `max_t(sqrt(x(t)^2+y(t)^2+z(t)^2))` by the Cauchy-Schwarz inequality. The overestimate can cause the threshold comparison `peak_residual_magnitude > threshold_au` to return True (detected) when the actual peak 3D displacement never exceeded the threshold at any single moment.",
+      "intent_link": "The project intends to calculate detection rates from residual statistics. Overestimating peak displacement inflates the detection rate and invalidates rate estimates, undermining the core Monte Carlo analysis goal.",
+      "id": "F048",
+      "status": "survived",
+      "falsifier_note": "Confirmed at src/ensemble_runner.py:316 'np.linalg.norm(pos_peak_au[target_particle_idx, :])', where pos_peak_au comes from calculate_peak (residual_analysis.py:293 'np.max(np.abs(data_residuals), axis=0)') — independent per-dimension temporal maxima. sqrt(max_x^2+max_y^2+max_z^2) >= max_t sqrt(x(t)^2+y(t)^2+z(t)^2) because each per-dimension squared maximum dominates that dimension at every t; equality only if all dims peak simultaneously. The overestimate can push peak_residual_magnitude > threshold_au (line 318) when the true instantaneous 3D displacement never exceeded the threshold, producing false-positive detections. (The 'Cauchy-Schwarz' attribution is loose — it is the per-component max inequality — but the conclusion holds.) Upheld, medium."
+    },
+    {
+      "title": "src/ directory has no __init__.py; namespace-package status prevents pip-installable package even if directory name or find_packages() call is corrected",
+      "location": "src/",
+      "class": "design-defect",
+      "severity": "medium",
+      "evidence": "Glob for `**/__init__.py` returns only `tests/__init__.py`; there is no `src/__init__.py`. Python's `setuptools.find_packages()` identifies packages by the presence of `__init__.py`. Without it, `find_packages()` returns an empty list regardless of the `name=` or `where=` arguments, so `pip install .` installs nothing from `src/`. In Python 3, `src` is treated as a namespace package, which works for development (when `src/` is on sys.path) but breaks upon installation: installed namespace packages do not support relative imports (`from . import parameter_sampler`), which are used in ensemble_runner.py, simulation_runner.py, synthetic_data.py, and visualization.py via try/except blocks. The existing finding at setup.py:9 attributes the failure to a directory-name mismatch; the missing `__init__.py` is a separate, independent cause that would remain even if the directory were renamed correctly.",
+      "intent_link": "The project is packaged via setup.py and is intended to be importable as a module. Without __init__.py the package cannot be installed or used in relative-import mode by external consumers.",
+      "id": "F049",
+      "status": "survived",
+      "falsifier_note": "Confirmed at source. `find . -name __init__.py` returns only ./tests/__init__.py — there is NO src/__init__.py. setup.py:9 calls bare find_packages() (no `where=`/`package_dir`), which discovers packages by presence of __init__.py; with src lacking one, find_packages() returns ['tests'] (or empty re: src), so `pip install .` installs no module from src/. The src modules use relative imports that require true package context: ensemble_runner.py:10-13 (`from . import parameter_sampler/simulation_runner/residual_analysis/n_body_simulation`), simulation_runner.py:4-5 (`from . import n_body_simulation/analytic_impulse`), synthetic_data.py:6 (`from . import residual_analysis`). These confirm the finding's claim that missing __init__.py is an independent cause of un-installability distinct from any directory-name/where= mismatch. Severity medium is reasonable: blocks installation but dev-mode sys.path execution still works."
+    }
+  ],
+  "refuted_or_unverified": [
+    {
+      "title": "run_simulation does not pass exact_finish_time=1, causing WHFast/Mercurius runs to overshoot target end time",
+      "location": "src/n_body_simulation.py:145",
+      "class": "bug",
+      "severity": "low",
+      "evidence": "run_simulation line 145 calls self.sim.integrate(target_rebound_time) without exact_finish_time=1. The sibling method integrate_to_time line 169 explicitly passes exact_finish_time=1 with the comment 'for precision'. For WHFast and Mercurius (the default integrators, line 43) REBOUND advances one full timestep past target_rebound_time when exact_finish_time is not set, producing a final time that overshoots the requested end. This inconsistency means run_simulation and integrate_to_time produce different final times for the same target, breaking time-aligned comparisons between baseline and perturbed results.",
+      "intent_link": "Accurate end-time control is required for computing residuals at matching time points between baseline and perturbed simulations.",
+      "id": "F043",
+      "status": "refuted",
+      "falsifier_note": "The behavioral claim is false: REBOUND's Python API Simulation.integrate(self, tmax, exact_finish_time=1) defaults exact_finish_time to 1. run_simulation (n_body_simulation.py:145) calling self.sim.integrate(target_rebound_time) without the kwarg therefore uses exact_finish_time=1 — identical to integrate_to_time's explicit pass at line 169. Both finish exactly at the target; there is no one-timestep overshoot and no divergence in final times for the same target. The cited code difference exists but does not produce the asserted effect."
+    }
+  ],
+  "coverage": {
+    "surface_count": null,
+    "visited": null,
+    "note": "reconstructed mid-run; coverage finalized at the live checkpoint"
+  },
+  "_reconstruction": {
+    "at": "2026-06-17T16:30:22.335Z",
+    "source": "audit/.work/a_s2_*.json (this run)",
+    "reflects": "round-2 survivor set",
+    "caveat": "the live process is finishing round 3; the official 02-static-audit.md will supersede this if it checkpoints"
+  }
+}
+```
+</details>
