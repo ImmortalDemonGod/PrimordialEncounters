@@ -121,8 +121,9 @@ async function runAgent({ name, prompt, schema, model = M.fast, maxTurns = 50, w
   const out = join(WORK, "a_" + tag + ".json");
   const tools = (web ? "Read,Grep,Glob,Bash,WebSearch,WebFetch" : "Read,Grep,Glob,Bash") + ",Write";
   const full = prompt +
-    "\n\nOUTPUT CONTRACT: Use the Write tool to put ONLY raw JSON (no prose, no markdown fence) conforming to this JSON Schema:\n" +
-    j(schema) + "\nWrite it to exactly this path: " + out + "\nThe JSON file you Write is your sole deliverable.";
+    "\n\nOUTPUT CONTRACT (mandatory): Your FINAL action MUST be a single Write tool call that creates exactly this file: " + out +
+    "\nIts contents must be ONLY raw JSON (no prose, no markdown fences) conforming to this JSON Schema:\n" + j(schema) +
+    "\nDo NOT end your turn with a text answer or summary. If you end without writing that file you have FAILED. Write the file as your very last step.";
   const args = ["-p", full, "--output-format", "stream-json", "--verbose", "--model", model,
     "--max-turns", String(maxTurns), "--allowedTools", tools, "--add-dir", REPO,
     "--strict-mcp-config", "--permission-mode", "acceptEdits", "--append-system-prompt", INVARIANTS];
@@ -294,13 +295,37 @@ function renderStage1(d, denom) {
 }
 
 // ════════════════════════════════ STAGE 2 ════════════════════════════════
-function fingerprint(f) { return (f.class + "|" + (f.location || "").toLowerCase().replace(/\s+/g, "") + "|" + (f.title || "").toLowerCase().split(/\s+/).slice(0, 6).join(" ")); }
+function primaryAnchor(loc) { return String(loc || "").split(/[,;]/)[0].trim().toLowerCase().replace(/\s+/g, ""); }
+function fingerprint(f) { return f.class + "|" + primaryAnchor(f.location) + "|" + (f.title || "").toLowerCase().split(/\s+/).slice(0, 5).join(" "); }
 function dedupe(findings) {
   const seen = new Map();
   for (const f of findings) { const k = fingerprint(f); if (!seen.has(k)) seen.set(k, f); }
   return [...seen.values()];
 }
 function reassignIds(findings) { findings.forEach((f, i) => (f.id = "F" + String(i + 1).padStart(3, "0"))); return findings; }
+
+// Falsify the ENTIRE finding set in bounded batches so each adversary can actually open
+// every cited path:line and still write its result. Graceful: a batch that fails leaves its
+// findings in failedIds (caller marks them unverified) rather than aborting the stage.
+async function falsifyChunked(findings, ctx, round) {
+  const empty = { verdicts: new Map(), failedIds: new Set(), toolText: "", toolPaths: [] };
+  if (!findings.length) return empty;
+  const falsifySchema = { type: "object", required: ["verdicts"], properties: {
+    verdicts: { type: "array", items: { type: "object", required: ["id", "verdict", "reason"], properties: {
+      id: { type: "string" }, verdict: { type: "string", enum: ["upheld", "refuted", "needs-evidence"] }, reason: { type: "string" } } } } } };
+  const BATCH = 8, batches = [];
+  for (let i = 0; i < findings.length; i += BATCH) batches.push(findings.slice(i, i + BATCH));
+  const res = await pMap(batches, (batch, bi) => agentValidated({
+    name: "s2-falsify-r" + round + "-b" + bi, model: M.deep, maxTurns: 28, timeoutMs: 7e5, schema: falsifySchema,
+    prompt: "You are an ADVERSARIAL FALSIFIER for a static audit of " + REPO + ". For EACH finding below you MUST open the cited path:line in the source and independently decide a verdict — do not trust the prior agent.\n" + ctx +
+      "\nFINDINGS (this batch only — return a verdict for EVERY id):\n" + j(batch.map((f) => ({ id: f.id, title: f.title, location: f.location, class: f.class, severity: f.severity, evidence: f.evidence }))) +
+      "\nVerdict per id: 'upheld' (the code at the anchor confirms it), 'refuted' (the code disproves it — cite why with path:line), or 'needs-evidence' (not substantiated at the cited anchor)." }), 2);
+  const verdicts = new Map(), failedIds = new Set(); let toolText = "", toolPaths = [];
+  batches.forEach((batch, bi) => { const r = res[bi];
+    if (r && r.ok) { for (const v of r.data.verdicts) verdicts.set(v.id, v); toolText += " " + (r.toolText || ""); toolPaths.push(...(r.toolPaths || [])); }
+    batch.forEach((f) => { if (!verdicts.has(f.id)) failedIds.add(f.id); }); });
+  return { verdicts, failedIds, toolText, toolPaths };
+}
 
 async function stage2(s1) {
   log("STAGE 2 — static audit");
@@ -323,36 +348,30 @@ async function stage2(s1) {
   let coverageToolText = lensRes.filter((r) => r.ok).map((r) => r.toolText).join(" ");
   let coverageToolPaths = lensRes.filter((r) => r.ok).flatMap((r) => r.toolPaths);
 
-  // adversarial fixpoint: re-audit (add) -> falsify WHOLE set -> survivors -> stable?
+  // adversarial fixpoint: re-audit (add) -> falsify WHOLE set in bounded batches -> survivors -> stable?
   const refuted = [];
   let prevSig = "";
-  const CEIL = 4;
+  const CEIL = 3;
   for (let round = 1; round <= CEIL; round++) {
-    // 1) re-audit sweep for anything missed (ordering: add candidates BEFORE falsifying)
-    const sweep = await agentValidated({ name: "s2-reaudit-r" + round, model: M.fast, maxTurns: 45, timeoutMs: 9e5, schema: auditFindingsSchema,
+    // 1) lean re-audit sweep (payload = titles+locations only) — add candidates BEFORE falsifying
+    const sweep = await agentValidated({ name: "s2-reaudit-r" + round, model: M.fast, maxTurns: 40, timeoutMs: 7e5, schema: auditFindingsSchema,
       prompt: "Stage-2 RE-AUDIT sweep (round " + round + ") for repo at " + REPO + ".\n" + ctx +
-        "\nThe CURRENT finding set (titles+locations) is:\n" + j(findings.map((f) => ({ id: f.id, title: f.title, location: f.location, class: f.class }))) +
-        "\nFind defects NOT already in this list — different files, different bugs, anything missed. Re-read source. Return ONLY new findings (empty array if none). Same finding shape." });
-    if (sweep.ok && sweep.data.findings.length) { findings = reassignIds(dedupe([...findings, ...sweep.data.findings])); log("  round " + round + " re-audit added candidates -> " + findings.length); }
+        "\nThe CURRENT findings (title @ location) already exist:\n" + j(findings.map((f) => f.title + " @ " + f.location)) +
+        "\nRe-read the source and report ONLY genuinely NEW, substantiated defects NOT already covered above (return an empty findings array if none). Same finding shape. Be selective — quality over quantity." });
+    if (sweep.ok && sweep.data.findings.length) { findings = reassignIds(dedupe([...findings, ...sweep.data.findings])); log("  round " + round + " re-audit -> " + findings.length + " total candidates"); }
     if (sweep.ok) { coverageToolText += " " + sweep.toolText; coverageToolPaths.push(...sweep.toolPaths); }
 
-    // 2) falsify the ENTIRE current set (adversarial promotion gate)
-    const falsifySchema = { type: "object", required: ["verdicts"], properties: {
-      verdicts: { type: "array", items: { type: "object", required: ["id", "verdict", "reason"], properties: {
-        id: { type: "string" }, verdict: { type: "string", enum: ["upheld", "refuted", "needs-evidence"] }, reason: { type: "string" } } } } } };
-    const fal = await agentValidated({ name: "s2-falsify-r" + round, model: M.deep, maxTurns: 55, timeoutMs: 12e5, schema: falsifySchema,
-      prompt: "You are an ADVERSARIAL FALSIFIER for Stage 2 of the audit of " + REPO + ". You are handed CLAIMS and the SOURCE. Try to REFUTE each finding by checking it against the actual code — do not defer to the prior agent.\n" + ctx +
-        "\nFINDINGS:\n" + j(findings.map((f) => ({ id: f.id, title: f.title, location: f.location, class: f.class, severity: f.severity, evidence: f.evidence }))) +
-        "\nFor EACH id return verdict: 'upheld' (you independently confirmed it at the cited location), 'refuted' (the code disproves it — say why with path:line), or 'needs-evidence' (claim not substantiated at the cited anchor). Open the cited files." });
-    if (!fal.ok) await halt("stage2", "falsifier failed to return verdicts in round " + round + ": " + fal.err);
-    const verdict = new Map(fal.data.verdicts.map((v) => [v.id, v]));
+    // 2) falsify the ENTIRE current set in bounded batches (adversarial promotion gate)
+    const { verdicts, failedIds, toolText: ftt, toolPaths: ftp } = await falsifyChunked(findings, ctx, round);
+    coverageToolText += " " + ftt; coverageToolPaths.push(...ftp);
+    if (findings.length && failedIds.size > findings.length * 0.5)
+      await halt("stage2", "adversarial falsifier could not verify " + failedIds.size + "/" + findings.length + " findings after batched retries (substrate failure) in round " + round);
     const survivors = [];
-    for (const f of findings) { const v = verdict.get(f.id);
+    for (const f of findings) { const v = verdicts.get(f.id);
       if (v && v.verdict === "upheld") { f.status = "survived"; f.falsifier_note = v.reason; survivors.push(f); }
-      else { f.status = v ? (v.verdict === "refuted" ? "refuted" : "unverified") : "unverified"; f.falsifier_note = v ? v.reason : "no verdict returned"; refuted.push(f); } }
+      else { f.status = v ? (v.verdict === "refuted" ? "refuted" : "unverified") : "unverified"; f.falsifier_note = v ? v.reason : "falsifier batch failed to return a verdict"; refuted.push(f); } }
     findings = reassignIds(survivors);
-    coverageToolText += " " + fal.toolText; coverageToolPaths.push(...fal.toolPaths);
-    log("  round " + round + " survivors after falsify: " + findings.length + " (cumulative refuted/unverified: " + refuted.length + ")");
+    log("  round " + round + " survivors after falsify: " + findings.length + " (cumulative refuted/unverified: " + refuted.length + ", batch-fails: " + failedIds.size + ")");
 
     // 3) fixpoint test (only AFTER falsifying the latest additions)
     const sig = findings.map(fingerprint).sort().join("||");
