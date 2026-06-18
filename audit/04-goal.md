@@ -1,0 +1,1044 @@
+# 04 — Goal + External Research
+
+_Stage 4. The repo's grounded long-term goal(s) and external ideas that serve them. Generated 2026-06-17T18:59:15.213Z._
+
+## Candidate long-term goals (kept plural by design)
+
+### Goal 1 (grounded)
+
+Replicate and extend the Tran et al. (arXiv:2312.17217v3) methodology for simulating asteroid-mass primordial black hole (PBH) flybys through the Solar System, producing the same observables (orbital residuals, near-monochromatic spectra, q_fom figure-of-merit) the paper uses to assess detectability.
+
+**Falsifiable success signals:**
+- A runnable single-flyby path produces position/velocity residual time series for a PBH encounter end-to-end (currently blocked: examples/single_flyby_example.py:34 is a placeholder print-only stub; F014/F025).
+- The q_fom figure-of-merit of paper Eq. (17) is implemented and used as the detection statistic rather than a raw peak-residual proxy (currently absent: residual_analysis.py:233-240 are commented-out stubs; F022, README.md:53 advertises it).
+- Spectral/Fourier analysis of residuals exists to confirm the near-monochromatic nature of orbital deviations matching the paper's Figure 3 (currently no FFT/spectral module exists in src/; F032, docs/pseudocode.md:282-308).
+- The impulse approximation is applied consistently with the paper (a single kick replacing the PBH's live force), not double-counted — i.e. the PBH does not simultaneously exert live N-body gravity and an analytic impulse (currently violated at simulation_runner.py:94-116; F040).
+- The analytic impulse kick points toward the PBH (attractive) and uses physically realistic non-relativistic velocities (currently the kick direction is inverted at analytic_impulse.py:66/F011 and example velocity is ~0.55c at analytic_impulse.py:104/F018).
+
+**Grounding (Stage 1-3 evidence):**
+- stage1.json provisional_intent: 'replicating and extending the methodology of Tran et al. (arXiv:2312.17217v3)'
+- docs/pseudocode.md note (stage1.json files): 'closely mapping to arXiv:2312.17217v3 sections and equations'
+- F022 residual_analysis.py:233 — q_fom (paper Eq. 17) entirely unimplemented; README.md:53 'Evaluate figure-of-merit q_fom for detection'
+- F032 README.md:58 + docs/pseudocode.md:282-308 — spectral analysis feature documented but no module
+- F040 simulation_runner.py:94 — PBH double-counted (live N-body mass plus analytic impulse)
+- F011 analytic_impulse.py:66 + stage3 region 'calculate_velocity_kick' (np.dot(delta_v_hat, r_ca_hat) = -1.0) — inverted kick direction
+
+### Goal 2 (grounded)
+
+Provide a complete, modular, pip-installable Python library (primordial_encounters) that researchers can install from declared dependencies and import to compose the PBH simulation pipeline (parameter sampling -> N-body/impulse simulation -> residual analysis -> synthetic data -> visualization).
+
+**Falsifiable success signals:**
+- `pip install .` installs the simulation code: src/ becomes a discoverable package (src/__init__.py present and find_packages() returns the package) (currently find_packages() returns only ['tests']; F030/F049, setup.py:9).
+- All modules import cleanly under package execution (e.g. `python -m src.ensemble_runner`) without ModuleNotFoundError from bare absolute imports (currently n_body_simulation.py:4 breaks under package import; F008/F019).
+- An environment built solely from requirements.txt/setup.py can import every module (currently tqdm is imported at ensemble_runner.py:6 but absent from requirements.txt; F039).
+- Inter-module data contracts are consistent so a sampler output feeds the simulation runner without KeyErrors (currently simulation_runner.py:84 reads 'mass' while the sampler emits 'mass_msun'; F004/F016).
+- Test frameworks are not forced as runtime dependencies (currently pytest/pytest-cov are in install_requires; F029, setup.py:14).
+
+**Grounding (Stage 1-3 evidence):**
+- stage1.json provisional_intent: 'a complete, modular computational pipeline'
+- setup.py note (stage1.json): 'setuptools setup script declaring Python package primordial_encounters ... for pip-installable distribution'
+- F030 setup.py:9 + stage3 region 'setup.py' — find_packages() finds only ['tests']; primordial_encounters matches no directory
+- F049 src/ — no src/__init__.py; namespace-package status blocks installation/relative imports
+- F008/F019 n_body_simulation.py:4 — bare absolute import breaks under package execution
+- F039 ensemble_runner.py:6 — tqdm imported but missing from requirements.txt
+- F004/F016 simulation_runner.py:84 vs parameter_sampler.py:112-117 — key contract mismatch
+
+### Goal 3 (grounded)
+
+Run large-scale Monte Carlo ensembles of PBH encounters to estimate detection rate as a function of PBH mass, with checkpointing/resumability for long runs and physically correct sampling distributions.
+
+**Falsifiable success signals:**
+- run_ensemble returns the list of per-member summaries its docstring promises, so detection-rate analysis can consume them (currently it returns None; F007/F015, ensemble_runner.py:277).
+- Ensemble members complete their perturbed simulations without the nested-multiprocessing crash (currently every member fails with 'daemonic processes are not allowed to have children'; F038, ensemble_runner.py:64 -> simulation_runner.py:228).
+- Per-member summaries, checkpoints, and final aggregated results serialize to JSON successfully (currently numpy types raise TypeError and are silently dropped; F012, ensemble_runner.py:136/249/263).
+- Sampled PBH velocities are physically realistic (~hundreds of km/s), i.e. the km/s->AU/day conversion is correct (currently ~86x too large; F003/F017, parameter_sampler.py:11).
+- calculate_detection_rates computes a denominator-consistent rate (unclassifiable members excluded from the denominator; rate vs binned rates consistent) (currently the denominator is inflated; F046, ensemble_runner.py:367) and the detection metric reflects true 3D peak displacement rather than the norm of per-dimension maxima (F048, ensemble_runner.py:316).
+
+**Grounding (Stage 1-3 evidence):**
+- stage1.json provisional_intent: 'run large Monte Carlo ensembles to estimate detection rates as a function of PBH mass'
+- ensemble_runner.py note (stage1.json): 'Drives large-scale Monte Carlo ensembles ... calculate_detection_rates() (with optional log-spaced mass binning)'
+- F015 ensemble_runner.py:277 + stage3 region 'run_ensemble' (returned None) — no return statement
+- F038 ensemble_runner.py:64 + stage3 finding_delta F038 ('daemonic processes are not allowed to have children')
+- F012 ensemble_runner.py:136 + stage3 region 'run_ensemble' ('Object of type ndarray is not JSON serializable')
+- F003/F017 parameter_sampler.py:11 + stage3 region 'sample_velocity' (velocities ~10-25 AU/day vs correct ~0.12)
+- F046 ensemble_runner.py:367 + F048 ensemble_runner.py:316 — denominator inflation and peak-magnitude overestimate
+
+### Goal 4 (grounded)
+
+Generate synthetic noisy observations and recover PBH parameters (mass, trajectory) from orbital perturbation residuals, including likelihood-ratio hypothesis testing against a no-PBH null, to assess detection feasibility.
+
+**Falsifiable success signals:**
+- A parameter-recovery module exists that fits PBH parameters from (synthetic) residuals (currently no parameter_recovery.py or equivalent exists; F031, README.md:53-57, docs/pseudocode.md:429-475).
+- Likelihood-ratio testing vs a no-PBH null hypothesis is implemented (currently synthetic_data.py only adds Gaussian noise and performs no fitting/testing; F031).
+- Inference dependencies (emcee, dynesty) declared in requirements.txt are actually exercised by a recovery routine (currently listed as optional in requirements.txt with no consuming code; stage1.json requirements.txt note).
+- Synthetic residual artifacts can be loaded safely without executing code from the data file (currently load_residuals uses eval() + np.load(allow_pickle=True); F001/F002/F026, residual_analysis.py:206/215).
+
+**Grounding (Stage 1-3 evidence):**
+- stage1.json provisional_intent: 'generate synthetic observations with noise for parameter recovery testing'
+- synthetic_data.py note (stage1.json): 'Intended for parameter recovery testing'
+- F031 README.md:53 + docs/pseudocode.md:429-475 — 'Parameter Recovery & Statistical Testing' documented, no module; synthetic_data.py only adds noise
+- requirements.txt note (stage1.json): 'optional jupyter, emcee, dynesty' (inference libraries)
+- F001/F026 residual_analysis.py:215 + F002 residual_analysis.py:206 + stage3 region 'load_residuals' — eval()/allow_pickle on loaded .npz
+
+### Goal 5 (grounded)
+
+Establish a reproducible, collaborative, AI-assisted development workflow (TaskMaster-driven task management, onboarding documentation, cross-platform contributor setup) so multiple contributors can build out the framework systematically.
+
+**Falsifiable success signals:**
+- A committed, runnable seed (PRD/scripts) lets a new contributor reproduce the TaskMaster task database (currently scripts/ is gitignored and absent; F053, .gitignore:199; npm run dev fails with missing scripts/dev.js per stage3).
+- Contributor tooling is portable across machines/OSes (currently run-task-master.bat hardcodes username 'Shadow' and the onboarding guide uses Windows-only .bat syntax with no Unix equivalent; F050/F056).
+- Documentation matches the actual repository layout and interfaces (currently README lists non-existent modules/scripts/flags and a missing LICENSE; F023/F024/F031/F032/F033).
+- TaskMaster .env examples reference valid Claude model IDs (currently 'claude-3-5-sonnet-20240229' is invalid; F052) and the run-task-master wrapper has a single consistent documented version (currently three inconsistent versions; F051).
+- A substantive test suite verifies numerical/physics correctness, runnable via the documented pytest config (currently only a directory-existence test and a bare-pass test exist; F034, tests/test_n_body_simulation.py:23).
+
+**Grounding (Stage 1-3 evidence):**
+- package.json note (stage1.json): 'task-master-ai ... scripts (dev, list, generate, parse-prd)'; Orchestrator_Task_Template_ROO note: 'Prompt template for AI orchestrator agents'
+- docs/onboarding-guide.md note (stage1.json): 'contributor onboarding guide covering environment setup, TaskMaster workflow, commit conventions, testing standards, and PR procedures'
+- F053 .gitignore:199 + stage3 region 'npm run dev' (Cannot find module scripts/dev.js) — scripts/ gitignored/absent
+- F050 run-task-master.bat:7-8 (hardcoded 'Shadow') + F056 docs/onboarding-guide.md (.bat-only commands)
+- F052 docs/onboarding-guide.md:101 — invalid Claude model ID; F051 three inconsistent run-task-master.bat versions
+- F034 tests/test_n_body_simulation.py:23 + stage3 orchestrator_probe (1 passed, 1 skipped) — no physics tests
+
+## External research
+
+_Returns are significantly diminishing after the first ~12 items: the core physics papers (Tran et al. 2023, Thoss & Burkert 2024, REBOUND integrators, DM density priors, mass-constraint reviews) and the two critical unused-dependency gaps (emcee, dynesty) are the highest-value findings; the infrastructure and tooling items (items 27–43, Bilby through PyGaia) are real and useful but represent incremental additions to an already well-populated toolbox with no remaining blind spots in the physics modeling layer._
+
+### Tran et al. 2023 (arXiv:2312.17217) — the primary paper this project replicates — presents the complete methodology for detecting asteroid-mass PBH flybys via Solar System orbital residuals, including impulse-approximation N-body simulation, Monte Carlo ensemble construction, and a signal-to-noise figure-of-merit (q_fom) derived from planetary position deviations. Reading this paper carefully would directly fill the project's stub sections (q_fom definition, PBH initial position sampling geometry). (corroborated)
+
+- **Relevance:** This is the ground-truth reference for every physics choice in PrimordialEncounters. The q_fom placeholder and the PBH initial position calculation stub (both identified in the Stage 1 audit) are defined explicitly in this paper. Implementing them faithfully from the source resolves the two largest pipeline gaps.
+- **Sources:** [Close encounters of the primordial kind: a new observable for primordial black holes as dark matter (Tran et al. 2023)](https://arxiv.org/abs/2312.17217)
+
+### Thoss & Burkert 2024 (arXiv:2409.04518) perform independent numerical simulations of asteroid-mass PBH gravitational perturbations on planetary orbits, directly comparable to the PrimordialEncounters pipeline. They derive perturbation amplitudes as a function of PBH mass and impact parameter using full N-body integration, providing a validation benchmark for the project's impulse-approximation shortcuts. (corroborated)
+
+- **Relevance:** Cross-checking PrimordialEncounters residual outputs against Thoss & Burkert's Figure results would provide an independent validation of the simulation pipeline — directly addressing the identified absence of integration tests and end-to-end validation.
+- **Sources:** [Primordial Black Holes in the Solar System (Thoss & Burkert 2024)](https://arxiv.org/abs/2409.04518)
+
+### The REBOUND N-body integrator (Rein & Liu 2012) is the simulation engine the project wraps. The foundational paper specifies integration accuracy, coordinate systems, and the API for adding particles and reading orbital elements — all directly relevant to how NBodySimulation should configure the integrator and extract residuals. (corroborated)
+
+- **Relevance:** The project's NBodySimulation wraps REBOUND but the Stage 1 audit found no integration tests and possible stub sections. The REBOUND paper specifies expected numerical behavior (energy conservation, symplectic properties) that the test suite should validate against.
+- **Sources:** [REBOUND: An open-source multi-purpose N-body code for collisional dynamics (Rein & Liu 2012)](https://arxiv.org/abs/1110.4876); [REBOUND documentation and source](https://rebound.hanno-rein.de/)
+
+### The IAS15 integrator (Rein & Spiegel 2015, arXiv:1409.4779) — REBOUND's default high-order adaptive integrator — is accurate to machine precision over a billion orbits and handles close encounters without switching. For a PBH flyby simulation where the PBH makes a hyperbolic close passage, IAS15 is the correct integrator choice; alternatives like WHFast diverge during close encounters. (single-source)
+
+- **Relevance:** The project's NBodySimulation must select an appropriate integrator for the hyperbolic PBH trajectory. IAS15 is the correct choice for flyby simulations (vs WHFast which is symplectic and not designed for close encounters). The project should document or enforce this selection.
+- **Sources:** [IAS15: A fast, adaptive, high-order integrator for gravitational dynamics, accurate to machine precision over a billion orbits (Rein & Spiegel 2015)](https://arxiv.org/abs/1409.4779)
+
+### MERCURIUS (Rein et al. 2019, arXiv:1907.11335) is a hybrid symplectic integrator in REBOUND that automatically switches between WHFast (fast, symplectic) and IAS15 (accurate, adaptive) based on proximity to close encounters. For long baseline Solar System integrations with an impulsive PBH encounter, MERCURIUS can deliver both long-term orbital stability and close-encounter accuracy. (single-source)
+
+- **Relevance:** For ensemble Monte Carlo runs with thousands of simulations, MERCURIUS offers a speed-accuracy tradeoff superior to using IAS15 throughout. Adopting it would directly improve the performance of the large-ensemble detection-rate estimation pipeline.
+- **Sources:** [High-order symplectic integrators for planetary dynamics and their implementation in REBOUND (Rein, Tamayo & Brown 2019)](https://arxiv.org/abs/1907.11335)
+
+### The gravitational impulse approximation — assuming the PBH travels in a straight line at constant velocity during the encounter, so each planet receives a velocity kick Δv = 2GM_PBH / (b v_∞) perpendicular to the flyby trajectory — is the shortcut the project's n_body_simulation.py uses. The approximation is valid when the encounter timescale (b/v_∞) is much shorter than the planet's orbital period. Explicit validation of this condition across the sampled parameter space is needed. (corroborated)
+
+- **Relevance:** The Stage 1 audit identified impulse-approximation shortcuts as a key feature. Without explicit validation that the approximation holds across all sampled (mass, impact parameter, velocity) combinations, the pipeline may silently produce wrong residuals for slow or close encounters. A validity-check module would close this gap.
+- **Sources:** [The Potential Impact of Primordial Black Holes on Exoplanet Systems (2025)](https://arxiv.org/abs/2507.05389); [Close encounters of the primordial kind: a new observable for primordial black holes as dark matter (Tran et al. 2023)](https://arxiv.org/abs/2312.17217)
+
+### Probing Primordial Black Holes and Dark Matter Clumps in the Solar System with Gravimeter and GNSS Networks (arXiv:2403.14397) develops a semi-analytical + Monte Carlo framework very similar to PrimordialEncounters but targeted at ground-based gravimeter and GNSS timing signatures rather than planetary orbital residuals. The paper derives encounter rate estimates, DM density assumptions, and detection probability as a function of mass — directly comparable inputs for the project's Monte Carlo ensemble. (single-source)
+
+- **Relevance:** This paper's Monte Carlo methodology and local DM density/velocity distribution assumptions can serve as a cross-check for the project's parameter_sampler.py. Discrepancies in encounter rate estimates would reveal modeling errors in the sampling distributions.
+- **Sources:** [Probing Primordial Black Holes and Dark Matter Clumps in the Solar System with Gravimeter and GNSS Networks (2024)](https://arxiv.org/abs/2403.14397)
+
+### The local dark matter density (ρ_DM ≈ 0.3–0.4 GeV/cm³ ≈ 0.01 M_sun/pc³) and the Maxwell-Boltzmann velocity distribution with characteristic speed v_0 ≈ 220 km/s and escape velocity v_esc ≈ 544 km/s define the statistical prior for PBH encounter velocity and flux. The project's parameter_sampler.py must implement these correctly to produce physically calibrated Monte Carlo ensembles. (corroborated)
+
+- **Relevance:** The local DM velocity distribution directly controls the sampled encounter velocity parameter, which in turn sets the encounter timescale (and hence the validity of the impulse approximation) and the signal amplitude. Wrong velocity sampling propagates through the entire detection-rate calculation.
+- **Sources:** [Probing Primordial Black Holes and Dark Matter Clumps in the Solar System with Gravimeter and GNSS Networks (2024)](https://arxiv.org/abs/2403.14397); [Close encounters of the primordial kind: a new observable for primordial black holes as dark matter (Tran et al. 2023)](https://arxiv.org/abs/2312.17217)
+
+### Scholtz & Unwin 2020 (arXiv:1909.11090, PRL 125, 051103) proposed that a 1–10 Earth-mass primordial black hole could explain the observed clustering of extreme trans-Neptunian objects (the 'Planet 9' anomaly). This paper provides a concrete observational motivation for the mass range the project simulates and discusses how PBH orbital residuals on outer Solar System bodies would differ from a planet. (single-source)
+
+- **Relevance:** Provides scientific context and mass-range motivation for the project. The Planet 9 mass range (a few Earth masses) is distinct from the asteroid-mass range in Tran et al. — understanding both regimes helps scope the project's Monte Carlo mass grid.
+- **Sources:** [What If Planet 9 Is a Primordial Black Hole? (Scholtz & Unwin 2020)](https://arxiv.org/abs/1909.11090)
+
+### Carr, Kohri, Sendouda & Yokoyama 2021 (arXiv:2002.12778, Rep. Prog. Phys. 84, 116901) is the canonical comprehensive review of PBH constraints across all mass ranges. For the asteroid-mass window (10^17–10^23 g), it details which observational channels (microlensing, evaporation, neutron-star capture, gravitational wave background) constrain the dark matter fraction f_PBH, and which mass sub-ranges remain open. Essential for correctly setting the Monte Carlo mass prior. (corroborated)
+
+- **Relevance:** The project's parameter_sampler.py must draw PBH masses from a physically plausible range. This review identifies which parts of the asteroid-mass window are excluded by existing constraints, allowing the simulation to focus on viable dark-matter-candidate mass ranges.
+- **Sources:** [Constraints on Primordial Black Holes (Carr, Kohri, Sendouda & Yokoyama 2021)](https://arxiv.org/abs/2002.12778)
+
+### Niikura et al. 2019 (arXiv:1701.02151, Nature Astronomy 3, 524) used dense-cadence Subaru/HSC photometry of M31 to constrain microlensing by asteroid-mass PBHs in the 10^-14 to 10^-9 M_sun range. They place stringent upper limits on f_PBH ~ 1 for 10^-11–10^-6 M_sun, defining the lower-mass boundary of the remaining asteroid-mass window. (single-source)
+
+- **Relevance:** Defines the lower mass bound for the project's Monte Carlo mass sampling. Simulating PBH masses already ruled out by Niikura et al. wastes compute; calibrating the mass prior against this paper ensures ensemble resources focus on viable parameter space.
+- **Sources:** [Microlensing constraints on primordial black holes with the Subaru/HSC Andromeda observation (Niikura et al. 2019)](https://arxiv.org/abs/1701.02151)
+
+### Montero-Camacho et al. 2019 (arXiv:1906.05950, JCAP 2019) revisit all existing constraints on asteroid-mass PBHs, finding that optical microlensing, neutron-star capture, and white-dwarf survival constraints leave a viable window roughly 10^17–10^22 g. The 2024 paper 'How open is the asteroid-mass primordial black hole window?' (arXiv:2403.03839) updates these constraints and finds the window narrows but remains partially open. (corroborated)
+
+- **Relevance:** Together these two papers define the currently viable mass range for the asteroid-mass window that PrimordialEncounters simulates. They directly justify the mass sampling range in parameter_sampler.py and provide validation targets for the detection-rate outputs.
+- **Sources:** [Revisiting constraints on asteroid-mass primordial black holes as dark matter candidates (Montero-Camacho et al. 2019)](https://arxiv.org/abs/1906.05950); [How open is the asteroid-mass primordial black hole window? (2024, SciPost Physics)](https://arxiv.org/abs/2403.03839)
+
+### Planetary ephemeris groups (INPOP: Fienga et al.; DE: JPL; EPM: Pitjeva & Pitjev) produce the high-precision Solar System baseline against which orbital residuals are measured. Pitjeva & Pitjev 2013 (arXiv:1306.3043, MNRAS 432, 3431) directly constrain dark matter density using EPM; the INPOP17a paper (arXiv:1710.09167) discusses applying ephemeris residuals to fundamental physics tests. These define the observational sensitivity limit any simulation pipeline must match. (corroborated)
+
+- **Relevance:** The project's residual_calculator.py computes orbital position deviations of simulated Solar System bodies. The observational noise floor is set by ephemeris residuals from real ranging data (LLR, planetary radar, Cassini). Without calibrating against published ephemeris uncertainties, the q_fom figure-of-merit cannot be converted to a realistic detection probability.
+- **Sources:** [Relativistic effects and dark matter in the Solar system from observations of planets and spacecraft (Pitjeva & Pitjev 2013)](https://arxiv.org/abs/1306.3043); [The new lunar ephemeris INPOP17a and its application to fundamental physics (Fienga et al. 2017)](https://arxiv.org/abs/1710.09167)
+
+### The INPOP planetary ephemeris series (INPOP19a, INPOP20a, INPOP22a; Fienga et al., arXiv:2211.04881 and arXiv:2111.04499) provides the most stringent current constraints on anomalous accelerations in the inner Solar System via Cassini ranging residuals. The sensitivity to a passing compact object scales with its mass and minimum distance; published INPOP residual time series can set quantitative detection thresholds for the project's q_fom. (single-source)
+
+- **Relevance:** Implementing realistic ephemeris-based noise floors in the q_fom calculation is a direct path to converting simulation output into a physically meaningful detection rate — the core scientific deliverable of the project.
+- **Sources:** [INPOP Planetary ephemerides and applications in BepiColombo frame including new constraints on graviton mass and dilaton (Fienga et al. 2022)](https://arxiv.org/abs/2211.04881); [Evolution of INPOP planetary ephemerides and Bepi-Colombo simulations (Fienga et al. 2021)](https://arxiv.org/abs/2111.04499)
+
+### Novel Solar System Probes for Primordial Black Holes (arXiv:2511.04895, 2024) proposes detecting PBH flybys using pulsar timing arrays (dipolar timing residuals for asteroid-to-dwarf-planet mass PBHs) and ADAF accretion flares in the outer Solar System. This extends the detection channel set beyond the planetary orbital perturbation channel that PrimordialEncounters currently implements. (single-source)
+
+- **Relevance:** The project could be extended to compute synthetic pulsar timing residuals in addition to (or instead of) planetary position residuals, broadening its detection-mode coverage. This paper's sensitivity estimates provide direct comparison targets for multi-channel detection.
+- **Sources:** [Novel Solar System Probes for Primordial Black Holes (2024)](https://arxiv.org/abs/2511.04895)
+
+### Hawking radiation signatures from PBH transit: Klipfel, Fisher & Kaiser 2025 (arXiv:2506.14041) propose detecting asteroid-mass PBH flybys via time-dependent positron flux seen by the Alpha Magnetic Spectrometer (AMS) aboard the ISS. For a PBH passing within ~1 AU, the Hawking temperature gives a detectable positron signal lasting hours to days. This is an independent detection channel complementary to orbital perturbations. (single-source)
+
+- **Relevance:** Adding a Hawking radiation flux calculator to PrimordialEncounters would enable multi-messenger detection simulations and widen the project's scientific scope. The paper provides exact formulae for positron flux as a function of PBH mass and closest approach distance.
+- **Sources:** [Hawking Radiation Signatures from Primordial Black Holes Transiting the Inner Solar System: Prospects for Detection (Klipfel, Fisher & Kaiser 2025)](https://arxiv.org/abs/2506.14041)
+
+### Astrometric microlensing by PBHs observable with Gaia (arXiv:2208.14460) explores Gaia's sensitivity to transient astrometric deflections caused by PBH transits across lines-of-sight to background stars. This is distinct from the Solar System orbital perturbation channel — it tests PBHs in the broader Milky Way population — but shares the same mass range and provides an independent observational constraint on f_PBH. (single-source)
+
+- **Relevance:** Gaia astrometric sensitivity curves define an observational upper bound on PBH encounter rates in the heliocentric neighborhood. The project's detection-rate Monte Carlo should be cross-checked against Gaia constraints to ensure self-consistency.
+- **Sources:** [Astrometric Microlensing of Primordial Black Holes with Gaia (2022)](https://arxiv.org/abs/2208.14460)
+
+### Carr & Green 2024 historical review (arXiv:2406.05736) and Green 2014 mass-spectrum calculation (arXiv:1405.7023) explain how different inflationary power spectra produce PBH mass functions — monochromatic (delta-function), log-normal, or power-law. Most observational constraints assume a monochromatic mass function; an extended mass function substantially relaxes constraints and changes the effective encounter rate. (single-source)
+
+- **Relevance:** The project's parameter_sampler.py currently draws masses from an unspecified prior. Implementing a physically motivated mass function (e.g., log-normal with width σ as a free parameter) would extend the simulation to a more realistic scenario and enable comparison with constraint papers that assume extended mass functions.
+- **Sources:** [The History of Primordial Black Holes (Carr & Green 2024)](https://arxiv.org/abs/2406.05736); [Calculating the mass spectrum of primordial black holes (Green 2014)](https://arxiv.org/abs/1405.7023)
+
+### Testing Theories of Gravity with Planetary Ephemerides (arXiv:2303.01821, 2023) reviews how planetary and lunar ranging residuals constrain PPN parameters, MOND, and exotic objects. The techniques for extracting a signal from ranging time-series — including how baseline orbit fits absorb low-frequency signals and how to construct sensitivity curves as a function of perturbation timescale — translate directly to designing the project's orbital residual analysis. (single-source)
+
+- **Relevance:** The project's residual_calculator.py computes position differences but does not yet implement a frequency-domain sensitivity analysis. The ephemeris-constraint techniques in this review would enable the project to predict which PBH encounter timescales are detectable above the ranging noise floor.
+- **Sources:** [Testing Theories of Gravity with Planetary Ephemerides (2023)](https://arxiv.org/abs/2303.01821)
+
+### Capture of primordial black holes in extrasolar systems (arXiv:2205.09756) computes gravitational capture cross-sections for PBHs passing through planetary systems, finding that three-body capture is extremely rare but that the hyperbolic close-encounter rate for asteroid-mass PBHs is finite and computable. The b-plane (Öpik) framework used is the standard approach for computing encounter probability as a function of impact parameter. (single-source)
+
+- **Relevance:** The b-plane/Öpik formalism provides the theoretical basis for the geometric factor in the project's Monte Carlo encounter rate estimate. The project's parameter_sampler.py must correctly sample impact parameters in the b-plane to produce calibrated detection rates.
+- **Sources:** [Capture of primordial black holes in extrasolar systems (2022)](https://arxiv.org/abs/2205.09756)
+
+### REBOUNDx: Physics extension library adding general relativistic corrections and additional forces to REBOUND. The gr and gr_full effects add post-Newtonian corrections critical for accurate close-approach PBH flyby modeling where relativistic corrections can alter predicted orbital perturbations at sub-meter precision. (corroborated)
+
+- **Relevance:** The project uses REBOUND's WHFast and IAS15 integrators (n_body_simulation.py) without post-Newtonian corrections. REBOUNDx adds GR effects (gravitational redshift, orbital precession) via the gr and gr_full effects, critical for accurate close-approach PBH flyby modeling where relativistic corrections can alter the predicted orbital perturbations at the sub-meter precision the paper targets. Directly referenced in the bundled rebound_readme.md as the primary companion package for additional physics.
+- **Sources:** [REBOUNDx GitHub repository (dtamayo/reboundx)](https://github.com/dtamayo/reboundx); [REBOUNDx documentation on ReadTheDocs](https://reboundx.readthedocs.io/)
+
+### ASSIST: Ephemeris-quality test particle integration for accurate Solar System baseline simulations. ASSIST provides Solar System integrations at precision comparable to JPL's small-body integrator by including planetary and lunar forces, relativistic corrections, and non-gravitational forces. (corroborated)
+
+- **Relevance:** The project uses ad-hoc synthetic initial conditions (simulation_runner.py placeholder at line 90) that will produce inaccurate baselines. ASSIST provides Solar System integrations at precision comparable to JPL's small-body integrator by including planetary and lunar forces, relativistic corrections, and non-gravitational forces. Using ASSIST for the baseline run (against which PBH residuals are measured) would produce physically realistic residual signals rather than artifacts from inaccurate initial conditions.
+- **Sources:** [ASSIST GitHub repository (matthewholman/assist)](https://github.com/matthewholman/assist); [REBOUND README listing ASSIST as companion project for ephemeris-quality integrations](https://github.com/hannorein/rebound)
+
+### Celmech: Analytical and semianalytical celestial mechanics toolkit for cross-validating N-body residuals. Celmech provides the analytical counterpart to REBOUND for secular orbital element evolution and resonant dynamics, enabling cross-validation of numerical N-body residuals against analytical predictions. (single-source)
+
+- **Relevance:** The analytic_impulse.py module implements the linear impulse approximation. Celmech provides the analytical counterpart to REBOUND for secular orbital element evolution and resonant dynamics, enabling cross-validation of the numerical N-body residuals against analytical predictions. This directly closes the gap between the fast impulse approximation and full N-body simulation, providing a middle-ground check that the numerical residuals are physically sensible.
+- **Sources:** [Celmech GitHub repository (mentioned in REBOUND README as companion for analytical/semianalytical tools)](https://github.com/shadden/celmech)
+
+### astroquery JPL Horizons interface: Programmatic access to high-fidelity Solar System ephemerides for accurate initial conditions. astroquery.jplhorizons provides direct Python API access to the NASA JPL Horizons ephemeris system, enabling retrieval of accurate barycentric positions and velocities for all planets at any epoch. (corroborated)
+
+- **Relevance:** The pseudocode.md (line 78) explicitly prescribes loading Solar System initial conditions from 'JPL Horizons or INPOP21a', but simulation_runner.py uses synthetic/hardcoded positions. astroquery.jplhorizons provides direct Python API access to the NASA JPL Horizons ephemeris system, enabling retrieval of accurate barycentric positions and velocities for all planets at any epoch. This addresses the stub at simulation_runner.py:90 ('TODO: Calculate initial PBH position based on encounter parameters relative to target').
+- **Sources:** [astroquery JPL Horizons documentation](https://astroquery.readthedocs.io/en/latest/jplhorizons/jplhorizons.html); [JPL Horizons Web API documentation (NASA)](https://ssd-api.jpl.nasa.gov/doc/horizons.html); [astroquery GitHub repository (astropy/astroquery)](https://github.com/astropy/astroquery)
+
+### SpiceyPy: Python wrapper for NASA SPICE toolkit providing the highest-precision planetary ephemerides. NASA SPICE kernels (DE440, DE441) are the gold standard for precision planetary ephemerides used by JPL mission operations. SpiceyPy enables reading SPICE kernels in Python, providing sub-meter planetary position accuracy required to detect PBH-induced perturbations. (corroborated)
+
+- **Relevance:** NASA SPICE kernels (DE440, DE441) are the gold standard for precision planetary ephemerides used by JPL mission operations. SpiceyPy enables reading SPICE kernels in Python, providing sub-meter planetary position accuracy required to detect PBH-induced perturbations at the 0.1 m ephemeris precision cited in pseudocode.md. Complements astroquery as an alternative when offline access to full SPICE kernel files is needed.
+- **Sources:** [SpiceyPy GitHub repository (AndrewAnnex/SpiceyPy)](https://github.com/AndrewAnnex/SpiceyPy); [SpiceyPy documentation on ReadTheDocs](https://spiceypy.readthedocs.io/)
+
+### jplephem: Minimal-dependency Python package for direct access to JPL binary ephemeris files (DE440/DE441). Lightweight alternative to SpiceyPy for generating planetary positions from JPL ephemeris files using only NumPy. Useful for fast offline initialization of Solar System bodies in n_body_simulation.py without the full SPICE dependency stack. (single-source)
+
+- **Relevance:** Lightweight alternative to SpiceyPy for generating planetary positions from JPL ephemeris files using only NumPy. Useful for fast offline initialization of Solar System bodies in n_body_simulation.py without the full SPICE dependency stack. The DE440 kernel covers the Solar System from 1550 to 2650 AD at the precision needed for baseline simulations.
+- **Sources:** [jplephem on PyPI](https://pypi.org/project/jplephem/)
+
+### emcee (affine-invariant MCMC): Integrate the already-declared-but-unused emcee dependency into the parameter recovery pipeline. emcee is listed in requirements.txt but is not imported or used anywhere in the src/ directory. The commented-out q_fom figure-of-merit stub in residual_analysis.py (lines 233-240) is the natural integration point. (corroborated)
+
+- **Relevance:** emcee is listed in requirements.txt but is not imported or used anywhere in the src/ directory. The commented-out q_fom figure-of-merit stub in residual_analysis.py (lines 233-240) is the natural integration point: emcee provides MCMC infrastructure for sampling the posterior distribution of PBH mass and trajectory parameters from synthetic or real orbital residuals, implementing the parameter recovery pipeline described in pseudocode.md section 6.
+- **Sources:** [emcee GitHub repository (dfm/emcee)](https://github.com/dfm/emcee); [emcee v3 paper: Foreman-Mackey et al. 2019 (JOSS)](https://arxiv.org/abs/1911.07688); [emcee documentation on ReadTheDocs](https://emcee.readthedocs.io/)
+
+### dynesty (dynamic nested sampling): Integrate the already-declared-but-unused dynesty dependency for Bayesian model evidence computation. dynesty is in requirements.txt but is unused. Unlike MCMC, nested sampling computes the Bayesian evidence (marginal likelihood), enabling rigorous model comparison between 'PBH present' and 'null hypothesis' models. (corroborated)
+
+- **Relevance:** dynesty is in requirements.txt but is unused. Unlike MCMC, nested sampling computes the Bayesian evidence (marginal likelihood), enabling rigorous model comparison between 'PBH present' and 'null hypothesis' models. This directly strengthens the detection rate estimation in ensemble_runner.py by replacing the ad-hoc detection_threshold parameter with a principled log-evidence detection statistic based on the ratio of signal-present vs. noise-only models.
+- **Sources:** [dynesty GitHub repository (joshspeagle/dynesty)](https://github.com/joshspeagle/dynesty); [dynesty documentation on ReadTheDocs](https://dynesty.readthedocs.io/)
+
+### UltraNest: Robust parameter-free nested sampling via MLFriends algorithm for complex parameter posteriors. Alternative to dynesty using the theoretically-grounded MLFriends algorithm that avoids manual tuning parameters. PBH encounter parameters can produce multi-modal or highly elongated posteriors where dynesty's ellipsoidal bounds perform poorly. (corroborated)
+
+- **Relevance:** Alternative to dynesty using the theoretically-grounded MLFriends algorithm that avoids manual tuning parameters (nlive, bound, sample settings). PBH encounter parameters (mass, impact parameter, velocity direction) can produce multi-modal or highly elongated posteriors where dynesty's ellipsoidal bounds perform poorly. UltraNest's step sampler handles non-ellipsoidal posteriors without tuning, reducing the risk of biased parameter recovery.
+- **Sources:** [UltraNest GitHub repository (JohannesBuchner/UltraNest)](https://github.com/JohannesBuchner/UltraNest/); [UltraNest documentation](https://johannesbuchner.github.io/UltraNest/index.html); [UltraNest ASCL Software Registry entry](https://ascl.net/1611.001)
+
+### Bilby: Complete Bayesian inference library for gravitational signals with modular likelihood and prior definitions. Bilby provides a unified Bayesian parameter estimation framework designed for gravitational signal analysis, with reusable likelihood functions, prior specifications, and backends to emcee, dynesty, UltraNest, and others. (corroborated)
+
+- **Relevance:** Bilby provides a unified Bayesian parameter estimation framework designed for gravitational signal analysis, with reusable likelihood functions, prior specifications, and backends to emcee, dynesty, UltraNest, and others. The PBH orbital perturbation problem is structurally identical to gravitational wave parameter estimation (detect signal from noise, recover source parameters). Bilby's architecture would scaffold the entire parameter recovery pipeline in synthetic_data.py + residual_analysis.py in one framework, replacing bespoke glue code.
+- **Sources:** [Bilby GitHub repository (bilby-dev/bilby)](https://github.com/bilby-dev/bilby); [Bilby paper: Ashton et al. 2019 (ApJS)](https://arxiv.org/abs/1811.02042); [Bilby IOP Science publication (ApJS 241, 27)](https://iopscience.iop.org/article/10.3847/1538-4365/ab06fc)
+
+### ArviZ: Bayesian inference diagnostics and visualization for validating MCMC/nested sampling outputs. ArviZ provides R-hat convergence diagnostics, effective sample size estimates, posterior predictive checks, and trace plots to validate that inference chains have converged and that parameter estimates are reliable. (corroborated)
+
+- **Relevance:** The planned parameter recovery pipeline will produce MCMC chains (emcee) or nested sampling results (dynesty/UltraNest). ArviZ provides R-hat convergence diagnostics, effective sample size estimates, posterior predictive checks, and trace plots to validate that inference chains have converged and that parameter estimates are reliable. Compatible with emcee, dynesty, PyMC, and NumPyro outputs via InferenceData format.
+- **Sources:** [ArviZ GitHub repository (arviz-devs/arviz)](https://github.com/arviz-devs/arviz); [ArviZ documentation](https://python.arviz.org/)
+
+### joblib: Parallel job execution with transparent result caching and memory-mapped NumPy array support. ensemble_runner.py uses Python multiprocessing with manual JSON checkpointing and per-member file I/O. joblib.Parallel replaces multiprocessing.Pool with a simpler API, its Memory decorator transparently caches expensive simulation results to disk, and its memory mapping eliminates copy overhead for large NumPy arrays shared across workers. (corroborated)
+
+- **Relevance:** ensemble_runner.py uses Python multiprocessing with manual JSON checkpointing and per-member file I/O. joblib.Parallel replaces multiprocessing.Pool with a simpler API, its Memory decorator transparently caches expensive simulation results to disk (enabling re-analysis with different detection thresholds without re-running simulations), and its memory mapping eliminates copy overhead for large NumPy position/velocity arrays shared across workers.
+- **Sources:** [joblib GitHub repository (joblib/joblib)](https://github.com/joblib/joblib); [joblib documentation on ReadTheDocs](https://joblib.readthedocs.io/); [joblib.Parallel API reference](https://joblib.readthedocs.io/en/stable/generated/joblib.Parallel.html)
+
+### Dask: Distributed out-of-core computing for scaling Monte Carlo ensembles to HPC clusters. ensemble_runner.py is bounded to a single machine via multiprocessing. Dask scales the same embarrassingly-parallel ensemble to HPC clusters via dask-jobqueue with minimal code changes and integrates with zarr for efficient parallel ensemble output storage. (corroborated)
+
+- **Relevance:** ensemble_runner.py is bounded to a single machine via multiprocessing. Dask scales the same embarrassingly-parallel ensemble to HPC clusters via dask-jobqueue (SLURM, PBS, SGE) with minimal code changes, provides out-of-core computation for ensembles larger than available RAM, and integrates with zarr for efficient parallel ensemble output storage. This directly enables the 10^4-10^6 member ensembles needed for statistically significant detection rate estimates at the detection-rate precision required by the paper.
+- **Sources:** [Dask documentation](https://docs.dask.org/); [Dask embarrassingly parallel workloads example](https://examples.dask.org/applications/embarrassingly-parallel.html); [Dask array tutorial](https://tutorial.dask.org/02_array.html)
+
+### Ray: Distributed actor model for stateful parallel simulation workers with fault tolerance. Ray's Actor model enables persistent REBOUND simulation state across method calls (avoiding repeated integrator initialization overhead per ensemble member) and scales from laptop to cloud clusters with built-in fault tolerance. (corroborated)
+
+- **Relevance:** Ray's Actor model enables persistent REBOUND simulation state across method calls (avoiding repeated integrator initialization overhead per ensemble member) and scales from laptop to cloud clusters. Ray's built-in fault tolerance (actor restart on failure) is valuable for long Monte Carlo runs where individual worker failures would otherwise lose progress. Alternative to Dask when fine-grained stateful parallelism is preferred over bulk data-parallel computation.
+- **Sources:** [Ray GitHub repository (ray-project/ray)](https://github.com/ray-project/ray); [Ray documentation (ray-overview/getting-started)](https://docs.ray.io/en/latest/ray-overview/getting-started.html)
+
+### h5py: HDF5 Python bindings to replace per-member .npz + .json file storage with a single hierarchical file. ensemble_runner.py writes one residuals.npz + summary.json per ensemble member, creating thousands of small files for large runs — a known bottleneck on HPC parallel file systems. (corroborated)
+
+- **Relevance:** ensemble_runner.py writes one residuals.npz + summary.json per ensemble member, creating thousands of small files for large runs — a known bottleneck on HPC parallel file systems. h5py provides a single HDF5 file with hierarchical groups (one per member) containing compressed residual arrays and metadata, built-in chunked partial I/O (load one member without reading all), and parallel read/write via MPI. HDF5 is the standard storage format in computational astrophysics (GADGET, FLASH, Illustris all use HDF5).
+- **Sources:** [h5py GitHub repository (h5py/h5py)](https://github.com/h5py/h5py); [h5py documentation](https://docs.h5py.org/); [h5py on PyPI](https://pypi.org/project/h5py/)
+
+### zarr: Chunked, compressed, cloud-native N-dimensional array storage as an alternative to h5py for ensemble outputs. zarr provides chunk-level compression and cloud-native storage (S3, GCS, local disk — same API) enabling ensemble outputs to be stored and analyzed across distributed systems with native Dask integration. (corroborated)
+
+- **Relevance:** zarr provides chunk-level compression and cloud-native storage (S3, GCS, local disk — same API) enabling ensemble outputs to be stored and analyzed across distributed systems. Its native Dask integration means ensemble residual arrays can be lazily loaded and analyzed in parallel without writing custom chunked I/O code. Particularly advantageous when combining with Dask-based ensemble execution for end-to-end scalable pipelines.
+- **Sources:** [zarr Python documentation on ReadTheDocs](https://zarr.readthedocs.io/); [zarr-developers GitHub organization](https://github.com/zarr-developers)
+
+### numba: JIT compilation for 10-100x speedup of hot numerical loops in analytic_impulse and residual_analysis. Adding @numba.jit decorators compiles the calculate_velocity_kick function and compute_residuals to machine code at first call using LLVM, achieving C-level performance without rewriting in C. (corroborated)
+
+- **Relevance:** The analytic_impulse.calculate_velocity_kick function and compute_residuals in residual_analysis.py are called once per ensemble member in the tight ensemble loop. Adding @numba.jit decorators compiles these to machine code at first call using LLVM, achieving C-level performance without rewriting in C. The @jit(parallel=True) variant additionally auto-parallelizes inner loops. For large ensembles, this directly reduces total wall-clock time proportionally to the fraction of time spent in these functions.
+- **Sources:** [Numba official website](https://numba.pydata.org/); [Numba 5-minute guide on ReadTheDocs](https://numba.readthedocs.io/en/stable/user/5minguide.html)
+
+### Hypothesis: Property-based testing library for validating physics invariants across automatically-generated parameter ranges. Hypothesis auto-generates diverse input combinations to verify that: (1) calculate_velocity_kick scales linearly with PBH mass, (2) delta_v direction is perpendicular to relative velocity at closest approach, (3) baseline-vs-baseline residuals are exactly zero, (4) impact parameter b > 0 always produces a finite kick magnitude. (corroborated)
+
+- **Relevance:** The project has only one placeholder test. Hypothesis auto-generates diverse input combinations to verify that: (1) calculate_velocity_kick scales linearly with PBH mass (a known analytic invariant from Eq. 2 of the paper), (2) delta_v direction is perpendicular to relative velocity at closest approach, (3) baseline-vs-baseline residuals are exactly zero, (4) impact parameter b > 0 always produces a finite kick magnitude. These properties cannot be verified by hand-picked test inputs and cover edge cases (near-zero b, very high velocity) that are likely sources of numerical bugs.
+- **Sources:** [Hypothesis GitHub repository (HypothesisWorks/hypothesis)](https://github.com/HypothesisWorks/hypothesis); [Hypothesis documentation at hypothesis.works](https://hypothesis.works)
+
+### pytest-benchmark: Performance regression testing for N-body integration and residual computation kernels. pytest-benchmark integrates directly into the existing pytest setup to benchmark calculate_velocity_kick, NBodySimulation.integrate, and compute_residuals per code change, preventing inadvertent performance regressions as the ensemble size scales up. (corroborated)
+
+- **Relevance:** The project has no performance tracking; pytest.ini configures only basic verbose output. pytest-benchmark integrates directly into the existing pytest setup to benchmark calculate_velocity_kick, NBodySimulation.integrate, and compute_residuals per code change. This prevents inadvertent performance regressions as the ensemble size scales up, and provides data for justifying the numba JIT or Dask parallelism upgrades.
+- **Sources:** [pytest-benchmark GitHub repository (ionelmc/pytest-benchmark)](https://github.com/ionelmc/pytest-benchmark); [pytest-benchmark documentation on ReadTheDocs](https://pytest-benchmark.readthedocs.io/en/latest/usage.html)
+
+### numpy.testing module: Tolerance-aware numerical array assertions for validating simulation outputs against analytical references. numpy.testing.assert_allclose provides rtol/atol-parameterized comparison of multi-dimensional position and velocity arrays, essential for regression tests comparing REBOUND outputs against known Keplerian solutions, energy conservation checks, and impulse approximation limiting cases. (single-source)
+
+- **Relevance:** numpy.testing.assert_allclose provides rtol/atol-parameterized comparison of multi-dimensional position and velocity arrays, essential for writing regression tests that compare REBOUND outputs against known Keplerian solutions (circular orbit, two-body problem), energy conservation checks, and impulse approximation limiting cases. More informative than plain assert statements for diagnosing numerical failures in N-body simulations.
+- **Sources:** [NumPy testing utilities documentation](https://numpy.org/doc/stable/reference/testing.html)
+
+### pytest-cov and codecov: Test coverage measurement to identify the full extent of uncovered code in the near-empty test suite. pytest-cov generates line-level coverage reports showing exactly which branches of n_body_simulation.py, analytic_impulse.py, ensemble_runner.py, and residual_analysis.py are untested. (corroborated)
+
+- **Relevance:** The project has one meaningful test (directory existence) and one empty placeholder test body (pass). pytest-cov generates line-level coverage reports showing exactly which branches of n_body_simulation.py, analytic_impulse.py, ensemble_runner.py, and residual_analysis.py are untested, guiding systematic test development. Integration with codecov provides per-PR coverage tracking to prevent coverage regressions as tests are added.
+- **Sources:** [pytest-cov on PyPI](https://pypi.org/project/pytest-cov/); [codecov GitHub (codecov/codecov-python)](https://github.com/codecov/codecov-python)
+
+### Sorcha: LSST/Rubin Observatory Solar System survey simulator for generating physically realistic synthetic observations. Sorcha is a modular LSST-designed catalog-level simulator that generates synthetic astrometric and photometric observations with physically motivated noise models calibrated to actual Rubin Observatory performance. (corroborated)
+
+- **Relevance:** The synthetic_data.py module adds a single isotropic Gaussian noise_std_dev to all residuals, ignoring survey cadence, detection efficiency, and position-dependent measurement uncertainty. Sorcha is a modular LSST-designed catalog-level simulator that generates synthetic astrometric and photometric observations with physically motivated noise models calibrated to actual Rubin Observatory performance. This strengthens parameter recovery tests by simulating what a real astrometric survey would observe rather than idealized Gaussian noise.
+- **Sources:** [Sorcha GitHub repository (dirac-institute/sorcha)](https://github.com/dirac-institute/sorcha); [Sorcha documentation](https://sorcha.readthedocs.io/); [Sorcha add-ons package documentation](https://sorcha-addons.readthedocs.io/)
+
+### PyGaia: Gaia astrometric uncertainty propagation for modeling realistic epoch-dependent, correlated measurement noise. PyGaia implements covariance matrix propagation for astrometric uncertainties through the EpochPropagation class, enabling epoch-dependent and spatially-correlated noise models matching Gaia DR3 and future releases. (corroborated)
+
+- **Relevance:** synthetic_data.py adds uncorrelated Gaussian noise with a single fixed noise_std_dev for positions and velocities. PyGaia implements covariance matrix propagation for astrometric uncertainties through the EpochPropagation class, enabling epoch-dependent and spatially-correlated noise models matching Gaia DR3 and future releases. This is critical for validating that the parameter recovery pipeline works under realistic covariance structure rather than idealized white noise.
+- **Sources:** [PyGaia GitHub repository (agabrown/PyGaia)](https://github.com/agabrown/PyGaia); [PyGaia documentation on ReadTheDocs](https://pygaia.readthedocs.io/)
+
+
+
+<details><summary>machine-readable JSON (source of truth)</summary>
+
+```json
+{
+  "candidate_goals": [
+    {
+      "goal": "Replicate and extend the Tran et al. (arXiv:2312.17217v3) methodology for simulating asteroid-mass primordial black hole (PBH) flybys through the Solar System, producing the same observables (orbital residuals, near-monochromatic spectra, q_fom figure-of-merit) the paper uses to assess detectability.",
+      "success_signals": [
+        "A runnable single-flyby path produces position/velocity residual time series for a PBH encounter end-to-end (currently blocked: examples/single_flyby_example.py:34 is a placeholder print-only stub; F014/F025).",
+        "The q_fom figure-of-merit of paper Eq. (17) is implemented and used as the detection statistic rather than a raw peak-residual proxy (currently absent: residual_analysis.py:233-240 are commented-out stubs; F022, README.md:53 advertises it).",
+        "Spectral/Fourier analysis of residuals exists to confirm the near-monochromatic nature of orbital deviations matching the paper's Figure 3 (currently no FFT/spectral module exists in src/; F032, docs/pseudocode.md:282-308).",
+        "The impulse approximation is applied consistently with the paper (a single kick replacing the PBH's live force), not double-counted — i.e. the PBH does not simultaneously exert live N-body gravity and an analytic impulse (currently violated at simulation_runner.py:94-116; F040).",
+        "The analytic impulse kick points toward the PBH (attractive) and uses physically realistic non-relativistic velocities (currently the kick direction is inverted at analytic_impulse.py:66/F011 and example velocity is ~0.55c at analytic_impulse.py:104/F018)."
+      ],
+      "grounding": [
+        "stage1.json provisional_intent: 'replicating and extending the methodology of Tran et al. (arXiv:2312.17217v3)'",
+        "docs/pseudocode.md note (stage1.json files): 'closely mapping to arXiv:2312.17217v3 sections and equations'",
+        "F022 residual_analysis.py:233 — q_fom (paper Eq. 17) entirely unimplemented; README.md:53 'Evaluate figure-of-merit q_fom for detection'",
+        "F032 README.md:58 + docs/pseudocode.md:282-308 — spectral analysis feature documented but no module",
+        "F040 simulation_runner.py:94 — PBH double-counted (live N-body mass plus analytic impulse)",
+        "F011 analytic_impulse.py:66 + stage3 region 'calculate_velocity_kick' (np.dot(delta_v_hat, r_ca_hat) = -1.0) — inverted kick direction"
+      ],
+      "confidence": "grounded"
+    },
+    {
+      "goal": "Provide a complete, modular, pip-installable Python library (primordial_encounters) that researchers can install from declared dependencies and import to compose the PBH simulation pipeline (parameter sampling -> N-body/impulse simulation -> residual analysis -> synthetic data -> visualization).",
+      "success_signals": [
+        "`pip install .` installs the simulation code: src/ becomes a discoverable package (src/__init__.py present and find_packages() returns the package) (currently find_packages() returns only ['tests']; F030/F049, setup.py:9).",
+        "All modules import cleanly under package execution (e.g. `python -m src.ensemble_runner`) without ModuleNotFoundError from bare absolute imports (currently n_body_simulation.py:4 breaks under package import; F008/F019).",
+        "An environment built solely from requirements.txt/setup.py can import every module (currently tqdm is imported at ensemble_runner.py:6 but absent from requirements.txt; F039).",
+        "Inter-module data contracts are consistent so a sampler output feeds the simulation runner without KeyErrors (currently simulation_runner.py:84 reads 'mass' while the sampler emits 'mass_msun'; F004/F016).",
+        "Test frameworks are not forced as runtime dependencies (currently pytest/pytest-cov are in install_requires; F029, setup.py:14)."
+      ],
+      "grounding": [
+        "stage1.json provisional_intent: 'a complete, modular computational pipeline'",
+        "setup.py note (stage1.json): 'setuptools setup script declaring Python package primordial_encounters ... for pip-installable distribution'",
+        "F030 setup.py:9 + stage3 region 'setup.py' — find_packages() finds only ['tests']; primordial_encounters matches no directory",
+        "F049 src/ — no src/__init__.py; namespace-package status blocks installation/relative imports",
+        "F008/F019 n_body_simulation.py:4 — bare absolute import breaks under package execution",
+        "F039 ensemble_runner.py:6 — tqdm imported but missing from requirements.txt",
+        "F004/F016 simulation_runner.py:84 vs parameter_sampler.py:112-117 — key contract mismatch"
+      ],
+      "confidence": "grounded"
+    },
+    {
+      "goal": "Run large-scale Monte Carlo ensembles of PBH encounters to estimate detection rate as a function of PBH mass, with checkpointing/resumability for long runs and physically correct sampling distributions.",
+      "success_signals": [
+        "run_ensemble returns the list of per-member summaries its docstring promises, so detection-rate analysis can consume them (currently it returns None; F007/F015, ensemble_runner.py:277).",
+        "Ensemble members complete their perturbed simulations without the nested-multiprocessing crash (currently every member fails with 'daemonic processes are not allowed to have children'; F038, ensemble_runner.py:64 -> simulation_runner.py:228).",
+        "Per-member summaries, checkpoints, and final aggregated results serialize to JSON successfully (currently numpy types raise TypeError and are silently dropped; F012, ensemble_runner.py:136/249/263).",
+        "Sampled PBH velocities are physically realistic (~hundreds of km/s), i.e. the km/s->AU/day conversion is correct (currently ~86x too large; F003/F017, parameter_sampler.py:11).",
+        "calculate_detection_rates computes a denominator-consistent rate (unclassifiable members excluded from the denominator; rate vs binned rates consistent) (currently the denominator is inflated; F046, ensemble_runner.py:367) and the detection metric reflects true 3D peak displacement rather than the norm of per-dimension maxima (F048, ensemble_runner.py:316)."
+      ],
+      "grounding": [
+        "stage1.json provisional_intent: 'run large Monte Carlo ensembles to estimate detection rates as a function of PBH mass'",
+        "ensemble_runner.py note (stage1.json): 'Drives large-scale Monte Carlo ensembles ... calculate_detection_rates() (with optional log-spaced mass binning)'",
+        "F015 ensemble_runner.py:277 + stage3 region 'run_ensemble' (returned None) — no return statement",
+        "F038 ensemble_runner.py:64 + stage3 finding_delta F038 ('daemonic processes are not allowed to have children')",
+        "F012 ensemble_runner.py:136 + stage3 region 'run_ensemble' ('Object of type ndarray is not JSON serializable')",
+        "F003/F017 parameter_sampler.py:11 + stage3 region 'sample_velocity' (velocities ~10-25 AU/day vs correct ~0.12)",
+        "F046 ensemble_runner.py:367 + F048 ensemble_runner.py:316 — denominator inflation and peak-magnitude overestimate"
+      ],
+      "confidence": "grounded"
+    },
+    {
+      "goal": "Generate synthetic noisy observations and recover PBH parameters (mass, trajectory) from orbital perturbation residuals, including likelihood-ratio hypothesis testing against a no-PBH null, to assess detection feasibility.",
+      "success_signals": [
+        "A parameter-recovery module exists that fits PBH parameters from (synthetic) residuals (currently no parameter_recovery.py or equivalent exists; F031, README.md:53-57, docs/pseudocode.md:429-475).",
+        "Likelihood-ratio testing vs a no-PBH null hypothesis is implemented (currently synthetic_data.py only adds Gaussian noise and performs no fitting/testing; F031).",
+        "Inference dependencies (emcee, dynesty) declared in requirements.txt are actually exercised by a recovery routine (currently listed as optional in requirements.txt with no consuming code; stage1.json requirements.txt note).",
+        "Synthetic residual artifacts can be loaded safely without executing code from the data file (currently load_residuals uses eval() + np.load(allow_pickle=True); F001/F002/F026, residual_analysis.py:206/215)."
+      ],
+      "grounding": [
+        "stage1.json provisional_intent: 'generate synthetic observations with noise for parameter recovery testing'",
+        "synthetic_data.py note (stage1.json): 'Intended for parameter recovery testing'",
+        "F031 README.md:53 + docs/pseudocode.md:429-475 — 'Parameter Recovery & Statistical Testing' documented, no module; synthetic_data.py only adds noise",
+        "requirements.txt note (stage1.json): 'optional jupyter, emcee, dynesty' (inference libraries)",
+        "F001/F026 residual_analysis.py:215 + F002 residual_analysis.py:206 + stage3 region 'load_residuals' — eval()/allow_pickle on loaded .npz"
+      ],
+      "confidence": "grounded"
+    },
+    {
+      "goal": "Establish a reproducible, collaborative, AI-assisted development workflow (TaskMaster-driven task management, onboarding documentation, cross-platform contributor setup) so multiple contributors can build out the framework systematically.",
+      "success_signals": [
+        "A committed, runnable seed (PRD/scripts) lets a new contributor reproduce the TaskMaster task database (currently scripts/ is gitignored and absent; F053, .gitignore:199; npm run dev fails with missing scripts/dev.js per stage3).",
+        "Contributor tooling is portable across machines/OSes (currently run-task-master.bat hardcodes username 'Shadow' and the onboarding guide uses Windows-only .bat syntax with no Unix equivalent; F050/F056).",
+        "Documentation matches the actual repository layout and interfaces (currently README lists non-existent modules/scripts/flags and a missing LICENSE; F023/F024/F031/F032/F033).",
+        "TaskMaster .env examples reference valid Claude model IDs (currently 'claude-3-5-sonnet-20240229' is invalid; F052) and the run-task-master wrapper has a single consistent documented version (currently three inconsistent versions; F051).",
+        "A substantive test suite verifies numerical/physics correctness, runnable via the documented pytest config (currently only a directory-existence test and a bare-pass test exist; F034, tests/test_n_body_simulation.py:23)."
+      ],
+      "grounding": [
+        "package.json note (stage1.json): 'task-master-ai ... scripts (dev, list, generate, parse-prd)'; Orchestrator_Task_Template_ROO note: 'Prompt template for AI orchestrator agents'",
+        "docs/onboarding-guide.md note (stage1.json): 'contributor onboarding guide covering environment setup, TaskMaster workflow, commit conventions, testing standards, and PR procedures'",
+        "F053 .gitignore:199 + stage3 region 'npm run dev' (Cannot find module scripts/dev.js) — scripts/ gitignored/absent",
+        "F050 run-task-master.bat:7-8 (hardcoded 'Shadow') + F056 docs/onboarding-guide.md (.bat-only commands)",
+        "F052 docs/onboarding-guide.md:101 — invalid Claude model ID; F051 three inconsistent run-task-master.bat versions",
+        "F034 tests/test_n_body_simulation.py:23 + stage3 orchestrator_probe (1 passed, 1 skipped) — no physics tests"
+      ],
+      "confidence": "grounded"
+    }
+  ],
+  "research": {
+    "items": [
+      {
+        "idea": "Tran et al. 2023 (arXiv:2312.17217) — the primary paper this project replicates — presents the complete methodology for detecting asteroid-mass PBH flybys via Solar System orbital residuals, including impulse-approximation N-body simulation, Monte Carlo ensemble construction, and a signal-to-noise figure-of-merit (q_fom) derived from planetary position deviations. Reading this paper carefully would directly fill the project's stub sections (q_fom definition, PBH initial position sampling geometry).",
+        "relevance": "This is the ground-truth reference for every physics choice in PrimordialEncounters. The q_fom placeholder and the PBH initial position calculation stub (both identified in the Stage 1 audit) are defined explicitly in this paper. Implementing them faithfully from the source resolves the two largest pipeline gaps.",
+        "sources": [
+          {
+            "title": "Close encounters of the primordial kind: a new observable for primordial black holes as dark matter (Tran et al. 2023)",
+            "url": "https://arxiv.org/abs/2312.17217"
+          }
+        ],
+        "corroboration": "corroborated"
+      },
+      {
+        "idea": "Thoss & Burkert 2024 (arXiv:2409.04518) perform independent numerical simulations of asteroid-mass PBH gravitational perturbations on planetary orbits, directly comparable to the PrimordialEncounters pipeline. They derive perturbation amplitudes as a function of PBH mass and impact parameter using full N-body integration, providing a validation benchmark for the project's impulse-approximation shortcuts.",
+        "relevance": "Cross-checking PrimordialEncounters residual outputs against Thoss & Burkert's Figure results would provide an independent validation of the simulation pipeline — directly addressing the identified absence of integration tests and end-to-end validation.",
+        "sources": [
+          {
+            "title": "Primordial Black Holes in the Solar System (Thoss & Burkert 2024)",
+            "url": "https://arxiv.org/abs/2409.04518"
+          }
+        ],
+        "corroboration": "corroborated"
+      },
+      {
+        "idea": "The REBOUND N-body integrator (Rein & Liu 2012) is the simulation engine the project wraps. The foundational paper specifies integration accuracy, coordinate systems, and the API for adding particles and reading orbital elements — all directly relevant to how NBodySimulation should configure the integrator and extract residuals.",
+        "relevance": "The project's NBodySimulation wraps REBOUND but the Stage 1 audit found no integration tests and possible stub sections. The REBOUND paper specifies expected numerical behavior (energy conservation, symplectic properties) that the test suite should validate against.",
+        "sources": [
+          {
+            "title": "REBOUND: An open-source multi-purpose N-body code for collisional dynamics (Rein & Liu 2012)",
+            "url": "https://arxiv.org/abs/1110.4876"
+          },
+          {
+            "title": "REBOUND documentation and source",
+            "url": "https://rebound.hanno-rein.de/"
+          }
+        ],
+        "corroboration": "corroborated"
+      },
+      {
+        "idea": "The IAS15 integrator (Rein & Spiegel 2015, arXiv:1409.4779) — REBOUND's default high-order adaptive integrator — is accurate to machine precision over a billion orbits and handles close encounters without switching. For a PBH flyby simulation where the PBH makes a hyperbolic close passage, IAS15 is the correct integrator choice; alternatives like WHFast diverge during close encounters.",
+        "relevance": "The project's NBodySimulation must select an appropriate integrator for the hyperbolic PBH trajectory. IAS15 is the correct choice for flyby simulations (vs WHFast which is symplectic and not designed for close encounters). The project should document or enforce this selection.",
+        "sources": [
+          {
+            "title": "IAS15: A fast, adaptive, high-order integrator for gravitational dynamics, accurate to machine precision over a billion orbits (Rein & Spiegel 2015)",
+            "url": "https://arxiv.org/abs/1409.4779"
+          }
+        ],
+        "corroboration": "single-source"
+      },
+      {
+        "idea": "MERCURIUS (Rein et al. 2019, arXiv:1907.11335) is a hybrid symplectic integrator in REBOUND that automatically switches between WHFast (fast, symplectic) and IAS15 (accurate, adaptive) based on proximity to close encounters. For long baseline Solar System integrations with an impulsive PBH encounter, MERCURIUS can deliver both long-term orbital stability and close-encounter accuracy.",
+        "relevance": "For ensemble Monte Carlo runs with thousands of simulations, MERCURIUS offers a speed-accuracy tradeoff superior to using IAS15 throughout. Adopting it would directly improve the performance of the large-ensemble detection-rate estimation pipeline.",
+        "sources": [
+          {
+            "title": "High-order symplectic integrators for planetary dynamics and their implementation in REBOUND (Rein, Tamayo & Brown 2019)",
+            "url": "https://arxiv.org/abs/1907.11335"
+          }
+        ],
+        "corroboration": "single-source"
+      },
+      {
+        "idea": "The gravitational impulse approximation — assuming the PBH travels in a straight line at constant velocity during the encounter, so each planet receives a velocity kick Δv = 2GM_PBH / (b v_∞) perpendicular to the flyby trajectory — is the shortcut the project's n_body_simulation.py uses. The approximation is valid when the encounter timescale (b/v_∞) is much shorter than the planet's orbital period. Explicit validation of this condition across the sampled parameter space is needed.",
+        "relevance": "The Stage 1 audit identified impulse-approximation shortcuts as a key feature. Without explicit validation that the approximation holds across all sampled (mass, impact parameter, velocity) combinations, the pipeline may silently produce wrong residuals for slow or close encounters. A validity-check module would close this gap.",
+        "sources": [
+          {
+            "title": "The Potential Impact of Primordial Black Holes on Exoplanet Systems (2025)",
+            "url": "https://arxiv.org/abs/2507.05389"
+          },
+          {
+            "title": "Close encounters of the primordial kind: a new observable for primordial black holes as dark matter (Tran et al. 2023)",
+            "url": "https://arxiv.org/abs/2312.17217"
+          }
+        ],
+        "corroboration": "corroborated"
+      },
+      {
+        "idea": "Probing Primordial Black Holes and Dark Matter Clumps in the Solar System with Gravimeter and GNSS Networks (arXiv:2403.14397) develops a semi-analytical + Monte Carlo framework very similar to PrimordialEncounters but targeted at ground-based gravimeter and GNSS timing signatures rather than planetary orbital residuals. The paper derives encounter rate estimates, DM density assumptions, and detection probability as a function of mass — directly comparable inputs for the project's Monte Carlo ensemble.",
+        "relevance": "This paper's Monte Carlo methodology and local DM density/velocity distribution assumptions can serve as a cross-check for the project's parameter_sampler.py. Discrepancies in encounter rate estimates would reveal modeling errors in the sampling distributions.",
+        "sources": [
+          {
+            "title": "Probing Primordial Black Holes and Dark Matter Clumps in the Solar System with Gravimeter and GNSS Networks (2024)",
+            "url": "https://arxiv.org/abs/2403.14397"
+          }
+        ],
+        "corroboration": "single-source"
+      },
+      {
+        "idea": "The local dark matter density (ρ_DM ≈ 0.3–0.4 GeV/cm³ ≈ 0.01 M_sun/pc³) and the Maxwell-Boltzmann velocity distribution with characteristic speed v_0 ≈ 220 km/s and escape velocity v_esc ≈ 544 km/s define the statistical prior for PBH encounter velocity and flux. The project's parameter_sampler.py must implement these correctly to produce physically calibrated Monte Carlo ensembles.",
+        "relevance": "The local DM velocity distribution directly controls the sampled encounter velocity parameter, which in turn sets the encounter timescale (and hence the validity of the impulse approximation) and the signal amplitude. Wrong velocity sampling propagates through the entire detection-rate calculation.",
+        "sources": [
+          {
+            "title": "Probing Primordial Black Holes and Dark Matter Clumps in the Solar System with Gravimeter and GNSS Networks (2024)",
+            "url": "https://arxiv.org/abs/2403.14397"
+          },
+          {
+            "title": "Close encounters of the primordial kind: a new observable for primordial black holes as dark matter (Tran et al. 2023)",
+            "url": "https://arxiv.org/abs/2312.17217"
+          }
+        ],
+        "corroboration": "corroborated"
+      },
+      {
+        "idea": "Scholtz & Unwin 2020 (arXiv:1909.11090, PRL 125, 051103) proposed that a 1–10 Earth-mass primordial black hole could explain the observed clustering of extreme trans-Neptunian objects (the 'Planet 9' anomaly). This paper provides a concrete observational motivation for the mass range the project simulates and discusses how PBH orbital residuals on outer Solar System bodies would differ from a planet.",
+        "relevance": "Provides scientific context and mass-range motivation for the project. The Planet 9 mass range (a few Earth masses) is distinct from the asteroid-mass range in Tran et al. — understanding both regimes helps scope the project's Monte Carlo mass grid.",
+        "sources": [
+          {
+            "title": "What If Planet 9 Is a Primordial Black Hole? (Scholtz & Unwin 2020)",
+            "url": "https://arxiv.org/abs/1909.11090"
+          }
+        ],
+        "corroboration": "single-source"
+      },
+      {
+        "idea": "Carr, Kohri, Sendouda & Yokoyama 2021 (arXiv:2002.12778, Rep. Prog. Phys. 84, 116901) is the canonical comprehensive review of PBH constraints across all mass ranges. For the asteroid-mass window (10^17–10^23 g), it details which observational channels (microlensing, evaporation, neutron-star capture, gravitational wave background) constrain the dark matter fraction f_PBH, and which mass sub-ranges remain open. Essential for correctly setting the Monte Carlo mass prior.",
+        "relevance": "The project's parameter_sampler.py must draw PBH masses from a physically plausible range. This review identifies which parts of the asteroid-mass window are excluded by existing constraints, allowing the simulation to focus on viable dark-matter-candidate mass ranges.",
+        "sources": [
+          {
+            "title": "Constraints on Primordial Black Holes (Carr, Kohri, Sendouda & Yokoyama 2021)",
+            "url": "https://arxiv.org/abs/2002.12778"
+          }
+        ],
+        "corroboration": "corroborated"
+      },
+      {
+        "idea": "Niikura et al. 2019 (arXiv:1701.02151, Nature Astronomy 3, 524) used dense-cadence Subaru/HSC photometry of M31 to constrain microlensing by asteroid-mass PBHs in the 10^-14 to 10^-9 M_sun range. They place stringent upper limits on f_PBH ~ 1 for 10^-11–10^-6 M_sun, defining the lower-mass boundary of the remaining asteroid-mass window.",
+        "relevance": "Defines the lower mass bound for the project's Monte Carlo mass sampling. Simulating PBH masses already ruled out by Niikura et al. wastes compute; calibrating the mass prior against this paper ensures ensemble resources focus on viable parameter space.",
+        "sources": [
+          {
+            "title": "Microlensing constraints on primordial black holes with the Subaru/HSC Andromeda observation (Niikura et al. 2019)",
+            "url": "https://arxiv.org/abs/1701.02151"
+          }
+        ],
+        "corroboration": "single-source"
+      },
+      {
+        "idea": "Montero-Camacho et al. 2019 (arXiv:1906.05950, JCAP 2019) revisit all existing constraints on asteroid-mass PBHs, finding that optical microlensing, neutron-star capture, and white-dwarf survival constraints leave a viable window roughly 10^17–10^22 g. The 2024 paper 'How open is the asteroid-mass primordial black hole window?' (arXiv:2403.03839) updates these constraints and finds the window narrows but remains partially open.",
+        "relevance": "Together these two papers define the currently viable mass range for the asteroid-mass window that PrimordialEncounters simulates. They directly justify the mass sampling range in parameter_sampler.py and provide validation targets for the detection-rate outputs.",
+        "sources": [
+          {
+            "title": "Revisiting constraints on asteroid-mass primordial black holes as dark matter candidates (Montero-Camacho et al. 2019)",
+            "url": "https://arxiv.org/abs/1906.05950"
+          },
+          {
+            "title": "How open is the asteroid-mass primordial black hole window? (2024, SciPost Physics)",
+            "url": "https://arxiv.org/abs/2403.03839"
+          }
+        ],
+        "corroboration": "corroborated"
+      },
+      {
+        "idea": "Planetary ephemeris groups (INPOP: Fienga et al.; DE: JPL; EPM: Pitjeva & Pitjev) produce the high-precision Solar System baseline against which orbital residuals are measured. Pitjeva & Pitjev 2013 (arXiv:1306.3043, MNRAS 432, 3431) directly constrain dark matter density using EPM; the INPOP17a paper (arXiv:1710.09167) discusses applying ephemeris residuals to fundamental physics tests. These define the observational sensitivity limit any simulation pipeline must match.",
+        "relevance": "The project's residual_calculator.py computes orbital position deviations of simulated Solar System bodies. The observational noise floor is set by ephemeris residuals from real ranging data (LLR, planetary radar, Cassini). Without calibrating against published ephemeris uncertainties, the q_fom figure-of-merit cannot be converted to a realistic detection probability.",
+        "sources": [
+          {
+            "title": "Relativistic effects and dark matter in the Solar system from observations of planets and spacecraft (Pitjeva & Pitjev 2013)",
+            "url": "https://arxiv.org/abs/1306.3043"
+          },
+          {
+            "title": "The new lunar ephemeris INPOP17a and its application to fundamental physics (Fienga et al. 2017)",
+            "url": "https://arxiv.org/abs/1710.09167"
+          }
+        ],
+        "corroboration": "corroborated"
+      },
+      {
+        "idea": "The INPOP planetary ephemeris series (INPOP19a, INPOP20a, INPOP22a; Fienga et al., arXiv:2211.04881 and arXiv:2111.04499) provides the most stringent current constraints on anomalous accelerations in the inner Solar System via Cassini ranging residuals. The sensitivity to a passing compact object scales with its mass and minimum distance; published INPOP residual time series can set quantitative detection thresholds for the project's q_fom.",
+        "relevance": "Implementing realistic ephemeris-based noise floors in the q_fom calculation is a direct path to converting simulation output into a physically meaningful detection rate — the core scientific deliverable of the project.",
+        "sources": [
+          {
+            "title": "INPOP Planetary ephemerides and applications in BepiColombo frame including new constraints on graviton mass and dilaton (Fienga et al. 2022)",
+            "url": "https://arxiv.org/abs/2211.04881"
+          },
+          {
+            "title": "Evolution of INPOP planetary ephemerides and Bepi-Colombo simulations (Fienga et al. 2021)",
+            "url": "https://arxiv.org/abs/2111.04499"
+          }
+        ],
+        "corroboration": "single-source"
+      },
+      {
+        "idea": "Novel Solar System Probes for Primordial Black Holes (arXiv:2511.04895, 2024) proposes detecting PBH flybys using pulsar timing arrays (dipolar timing residuals for asteroid-to-dwarf-planet mass PBHs) and ADAF accretion flares in the outer Solar System. This extends the detection channel set beyond the planetary orbital perturbation channel that PrimordialEncounters currently implements.",
+        "relevance": "The project could be extended to compute synthetic pulsar timing residuals in addition to (or instead of) planetary position residuals, broadening its detection-mode coverage. This paper's sensitivity estimates provide direct comparison targets for multi-channel detection.",
+        "sources": [
+          {
+            "title": "Novel Solar System Probes for Primordial Black Holes (2024)",
+            "url": "https://arxiv.org/abs/2511.04895"
+          }
+        ],
+        "corroboration": "single-source"
+      },
+      {
+        "idea": "Hawking radiation signatures from PBH transit: Klipfel, Fisher & Kaiser 2025 (arXiv:2506.14041) propose detecting asteroid-mass PBH flybys via time-dependent positron flux seen by the Alpha Magnetic Spectrometer (AMS) aboard the ISS. For a PBH passing within ~1 AU, the Hawking temperature gives a detectable positron signal lasting hours to days. This is an independent detection channel complementary to orbital perturbations.",
+        "relevance": "Adding a Hawking radiation flux calculator to PrimordialEncounters would enable multi-messenger detection simulations and widen the project's scientific scope. The paper provides exact formulae for positron flux as a function of PBH mass and closest approach distance.",
+        "sources": [
+          {
+            "title": "Hawking Radiation Signatures from Primordial Black Holes Transiting the Inner Solar System: Prospects for Detection (Klipfel, Fisher & Kaiser 2025)",
+            "url": "https://arxiv.org/abs/2506.14041"
+          }
+        ],
+        "corroboration": "single-source"
+      },
+      {
+        "idea": "Astrometric microlensing by PBHs observable with Gaia (arXiv:2208.14460) explores Gaia's sensitivity to transient astrometric deflections caused by PBH transits across lines-of-sight to background stars. This is distinct from the Solar System orbital perturbation channel — it tests PBHs in the broader Milky Way population — but shares the same mass range and provides an independent observational constraint on f_PBH.",
+        "relevance": "Gaia astrometric sensitivity curves define an observational upper bound on PBH encounter rates in the heliocentric neighborhood. The project's detection-rate Monte Carlo should be cross-checked against Gaia constraints to ensure self-consistency.",
+        "sources": [
+          {
+            "title": "Astrometric Microlensing of Primordial Black Holes with Gaia (2022)",
+            "url": "https://arxiv.org/abs/2208.14460"
+          }
+        ],
+        "corroboration": "single-source"
+      },
+      {
+        "idea": "Carr & Green 2024 historical review (arXiv:2406.05736) and Green 2014 mass-spectrum calculation (arXiv:1405.7023) explain how different inflationary power spectra produce PBH mass functions — monochromatic (delta-function), log-normal, or power-law. Most observational constraints assume a monochromatic mass function; an extended mass function substantially relaxes constraints and changes the effective encounter rate.",
+        "relevance": "The project's parameter_sampler.py currently draws masses from an unspecified prior. Implementing a physically motivated mass function (e.g., log-normal with width σ as a free parameter) would extend the simulation to a more realistic scenario and enable comparison with constraint papers that assume extended mass functions.",
+        "sources": [
+          {
+            "title": "The History of Primordial Black Holes (Carr & Green 2024)",
+            "url": "https://arxiv.org/abs/2406.05736"
+          },
+          {
+            "title": "Calculating the mass spectrum of primordial black holes (Green 2014)",
+            "url": "https://arxiv.org/abs/1405.7023"
+          }
+        ],
+        "corroboration": "single-source"
+      },
+      {
+        "idea": "Testing Theories of Gravity with Planetary Ephemerides (arXiv:2303.01821, 2023) reviews how planetary and lunar ranging residuals constrain PPN parameters, MOND, and exotic objects. The techniques for extracting a signal from ranging time-series — including how baseline orbit fits absorb low-frequency signals and how to construct sensitivity curves as a function of perturbation timescale — translate directly to designing the project's orbital residual analysis.",
+        "relevance": "The project's residual_calculator.py computes position differences but does not yet implement a frequency-domain sensitivity analysis. The ephemeris-constraint techniques in this review would enable the project to predict which PBH encounter timescales are detectable above the ranging noise floor.",
+        "sources": [
+          {
+            "title": "Testing Theories of Gravity with Planetary Ephemerides (2023)",
+            "url": "https://arxiv.org/abs/2303.01821"
+          }
+        ],
+        "corroboration": "single-source"
+      },
+      {
+        "idea": "Capture of primordial black holes in extrasolar systems (arXiv:2205.09756) computes gravitational capture cross-sections for PBHs passing through planetary systems, finding that three-body capture is extremely rare but that the hyperbolic close-encounter rate for asteroid-mass PBHs is finite and computable. The b-plane (Öpik) framework used is the standard approach for computing encounter probability as a function of impact parameter.",
+        "relevance": "The b-plane/Öpik formalism provides the theoretical basis for the geometric factor in the project's Monte Carlo encounter rate estimate. The project's parameter_sampler.py must correctly sample impact parameters in the b-plane to produce calibrated detection rates.",
+        "sources": [
+          {
+            "title": "Capture of primordial black holes in extrasolar systems (2022)",
+            "url": "https://arxiv.org/abs/2205.09756"
+          }
+        ],
+        "corroboration": "single-source"
+      },
+      {
+        "idea": "REBOUNDx: Physics extension library adding general relativistic corrections and additional forces to REBOUND. The gr and gr_full effects add post-Newtonian corrections critical for accurate close-approach PBH flyby modeling where relativistic corrections can alter predicted orbital perturbations at sub-meter precision.",
+        "relevance": "The project uses REBOUND's WHFast and IAS15 integrators (n_body_simulation.py) without post-Newtonian corrections. REBOUNDx adds GR effects (gravitational redshift, orbital precession) via the gr and gr_full effects, critical for accurate close-approach PBH flyby modeling where relativistic corrections can alter the predicted orbital perturbations at the sub-meter precision the paper targets. Directly referenced in the bundled rebound_readme.md as the primary companion package for additional physics.",
+        "sources": [
+          {
+            "title": "REBOUNDx GitHub repository (dtamayo/reboundx)",
+            "url": "https://github.com/dtamayo/reboundx"
+          },
+          {
+            "title": "REBOUNDx documentation on ReadTheDocs",
+            "url": "https://reboundx.readthedocs.io/"
+          }
+        ],
+        "corroboration": "corroborated"
+      },
+      {
+        "idea": "ASSIST: Ephemeris-quality test particle integration for accurate Solar System baseline simulations. ASSIST provides Solar System integrations at precision comparable to JPL's small-body integrator by including planetary and lunar forces, relativistic corrections, and non-gravitational forces.",
+        "relevance": "The project uses ad-hoc synthetic initial conditions (simulation_runner.py placeholder at line 90) that will produce inaccurate baselines. ASSIST provides Solar System integrations at precision comparable to JPL's small-body integrator by including planetary and lunar forces, relativistic corrections, and non-gravitational forces. Using ASSIST for the baseline run (against which PBH residuals are measured) would produce physically realistic residual signals rather than artifacts from inaccurate initial conditions.",
+        "sources": [
+          {
+            "title": "ASSIST GitHub repository (matthewholman/assist)",
+            "url": "https://github.com/matthewholman/assist"
+          },
+          {
+            "title": "REBOUND README listing ASSIST as companion project for ephemeris-quality integrations",
+            "url": "https://github.com/hannorein/rebound"
+          }
+        ],
+        "corroboration": "corroborated"
+      },
+      {
+        "idea": "Celmech: Analytical and semianalytical celestial mechanics toolkit for cross-validating N-body residuals. Celmech provides the analytical counterpart to REBOUND for secular orbital element evolution and resonant dynamics, enabling cross-validation of numerical N-body residuals against analytical predictions.",
+        "relevance": "The analytic_impulse.py module implements the linear impulse approximation. Celmech provides the analytical counterpart to REBOUND for secular orbital element evolution and resonant dynamics, enabling cross-validation of the numerical N-body residuals against analytical predictions. This directly closes the gap between the fast impulse approximation and full N-body simulation, providing a middle-ground check that the numerical residuals are physically sensible.",
+        "sources": [
+          {
+            "title": "Celmech GitHub repository (mentioned in REBOUND README as companion for analytical/semianalytical tools)",
+            "url": "https://github.com/shadden/celmech"
+          }
+        ],
+        "corroboration": "single-source"
+      },
+      {
+        "idea": "astroquery JPL Horizons interface: Programmatic access to high-fidelity Solar System ephemerides for accurate initial conditions. astroquery.jplhorizons provides direct Python API access to the NASA JPL Horizons ephemeris system, enabling retrieval of accurate barycentric positions and velocities for all planets at any epoch.",
+        "relevance": "The pseudocode.md (line 78) explicitly prescribes loading Solar System initial conditions from 'JPL Horizons or INPOP21a', but simulation_runner.py uses synthetic/hardcoded positions. astroquery.jplhorizons provides direct Python API access to the NASA JPL Horizons ephemeris system, enabling retrieval of accurate barycentric positions and velocities for all planets at any epoch. This addresses the stub at simulation_runner.py:90 ('TODO: Calculate initial PBH position based on encounter parameters relative to target').",
+        "sources": [
+          {
+            "title": "astroquery JPL Horizons documentation",
+            "url": "https://astroquery.readthedocs.io/en/latest/jplhorizons/jplhorizons.html"
+          },
+          {
+            "title": "JPL Horizons Web API documentation (NASA)",
+            "url": "https://ssd-api.jpl.nasa.gov/doc/horizons.html"
+          },
+          {
+            "title": "astroquery GitHub repository (astropy/astroquery)",
+            "url": "https://github.com/astropy/astroquery"
+          }
+        ],
+        "corroboration": "corroborated"
+      },
+      {
+        "idea": "SpiceyPy: Python wrapper for NASA SPICE toolkit providing the highest-precision planetary ephemerides. NASA SPICE kernels (DE440, DE441) are the gold standard for precision planetary ephemerides used by JPL mission operations. SpiceyPy enables reading SPICE kernels in Python, providing sub-meter planetary position accuracy required to detect PBH-induced perturbations.",
+        "relevance": "NASA SPICE kernels (DE440, DE441) are the gold standard for precision planetary ephemerides used by JPL mission operations. SpiceyPy enables reading SPICE kernels in Python, providing sub-meter planetary position accuracy required to detect PBH-induced perturbations at the 0.1 m ephemeris precision cited in pseudocode.md. Complements astroquery as an alternative when offline access to full SPICE kernel files is needed.",
+        "sources": [
+          {
+            "title": "SpiceyPy GitHub repository (AndrewAnnex/SpiceyPy)",
+            "url": "https://github.com/AndrewAnnex/SpiceyPy"
+          },
+          {
+            "title": "SpiceyPy documentation on ReadTheDocs",
+            "url": "https://spiceypy.readthedocs.io/"
+          }
+        ],
+        "corroboration": "corroborated"
+      },
+      {
+        "idea": "jplephem: Minimal-dependency Python package for direct access to JPL binary ephemeris files (DE440/DE441). Lightweight alternative to SpiceyPy for generating planetary positions from JPL ephemeris files using only NumPy. Useful for fast offline initialization of Solar System bodies in n_body_simulation.py without the full SPICE dependency stack.",
+        "relevance": "Lightweight alternative to SpiceyPy for generating planetary positions from JPL ephemeris files using only NumPy. Useful for fast offline initialization of Solar System bodies in n_body_simulation.py without the full SPICE dependency stack. The DE440 kernel covers the Solar System from 1550 to 2650 AD at the precision needed for baseline simulations.",
+        "sources": [
+          {
+            "title": "jplephem on PyPI",
+            "url": "https://pypi.org/project/jplephem/"
+          }
+        ],
+        "corroboration": "single-source"
+      },
+      {
+        "idea": "emcee (affine-invariant MCMC): Integrate the already-declared-but-unused emcee dependency into the parameter recovery pipeline. emcee is listed in requirements.txt but is not imported or used anywhere in the src/ directory. The commented-out q_fom figure-of-merit stub in residual_analysis.py (lines 233-240) is the natural integration point.",
+        "relevance": "emcee is listed in requirements.txt but is not imported or used anywhere in the src/ directory. The commented-out q_fom figure-of-merit stub in residual_analysis.py (lines 233-240) is the natural integration point: emcee provides MCMC infrastructure for sampling the posterior distribution of PBH mass and trajectory parameters from synthetic or real orbital residuals, implementing the parameter recovery pipeline described in pseudocode.md section 6.",
+        "sources": [
+          {
+            "title": "emcee GitHub repository (dfm/emcee)",
+            "url": "https://github.com/dfm/emcee"
+          },
+          {
+            "title": "emcee v3 paper: Foreman-Mackey et al. 2019 (JOSS)",
+            "url": "https://arxiv.org/abs/1911.07688"
+          },
+          {
+            "title": "emcee documentation on ReadTheDocs",
+            "url": "https://emcee.readthedocs.io/"
+          }
+        ],
+        "corroboration": "corroborated"
+      },
+      {
+        "idea": "dynesty (dynamic nested sampling): Integrate the already-declared-but-unused dynesty dependency for Bayesian model evidence computation. dynesty is in requirements.txt but is unused. Unlike MCMC, nested sampling computes the Bayesian evidence (marginal likelihood), enabling rigorous model comparison between 'PBH present' and 'null hypothesis' models.",
+        "relevance": "dynesty is in requirements.txt but is unused. Unlike MCMC, nested sampling computes the Bayesian evidence (marginal likelihood), enabling rigorous model comparison between 'PBH present' and 'null hypothesis' models. This directly strengthens the detection rate estimation in ensemble_runner.py by replacing the ad-hoc detection_threshold parameter with a principled log-evidence detection statistic based on the ratio of signal-present vs. noise-only models.",
+        "sources": [
+          {
+            "title": "dynesty GitHub repository (joshspeagle/dynesty)",
+            "url": "https://github.com/joshspeagle/dynesty"
+          },
+          {
+            "title": "dynesty documentation on ReadTheDocs",
+            "url": "https://dynesty.readthedocs.io/"
+          }
+        ],
+        "corroboration": "corroborated"
+      },
+      {
+        "idea": "UltraNest: Robust parameter-free nested sampling via MLFriends algorithm for complex parameter posteriors. Alternative to dynesty using the theoretically-grounded MLFriends algorithm that avoids manual tuning parameters. PBH encounter parameters can produce multi-modal or highly elongated posteriors where dynesty's ellipsoidal bounds perform poorly.",
+        "relevance": "Alternative to dynesty using the theoretically-grounded MLFriends algorithm that avoids manual tuning parameters (nlive, bound, sample settings). PBH encounter parameters (mass, impact parameter, velocity direction) can produce multi-modal or highly elongated posteriors where dynesty's ellipsoidal bounds perform poorly. UltraNest's step sampler handles non-ellipsoidal posteriors without tuning, reducing the risk of biased parameter recovery.",
+        "sources": [
+          {
+            "title": "UltraNest GitHub repository (JohannesBuchner/UltraNest)",
+            "url": "https://github.com/JohannesBuchner/UltraNest/"
+          },
+          {
+            "title": "UltraNest documentation",
+            "url": "https://johannesbuchner.github.io/UltraNest/index.html"
+          },
+          {
+            "title": "UltraNest ASCL Software Registry entry",
+            "url": "https://ascl.net/1611.001"
+          }
+        ],
+        "corroboration": "corroborated"
+      },
+      {
+        "idea": "Bilby: Complete Bayesian inference library for gravitational signals with modular likelihood and prior definitions. Bilby provides a unified Bayesian parameter estimation framework designed for gravitational signal analysis, with reusable likelihood functions, prior specifications, and backends to emcee, dynesty, UltraNest, and others.",
+        "relevance": "Bilby provides a unified Bayesian parameter estimation framework designed for gravitational signal analysis, with reusable likelihood functions, prior specifications, and backends to emcee, dynesty, UltraNest, and others. The PBH orbital perturbation problem is structurally identical to gravitational wave parameter estimation (detect signal from noise, recover source parameters). Bilby's architecture would scaffold the entire parameter recovery pipeline in synthetic_data.py + residual_analysis.py in one framework, replacing bespoke glue code.",
+        "sources": [
+          {
+            "title": "Bilby GitHub repository (bilby-dev/bilby)",
+            "url": "https://github.com/bilby-dev/bilby"
+          },
+          {
+            "title": "Bilby paper: Ashton et al. 2019 (ApJS)",
+            "url": "https://arxiv.org/abs/1811.02042"
+          },
+          {
+            "title": "Bilby IOP Science publication (ApJS 241, 27)",
+            "url": "https://iopscience.iop.org/article/10.3847/1538-4365/ab06fc"
+          }
+        ],
+        "corroboration": "corroborated"
+      },
+      {
+        "idea": "ArviZ: Bayesian inference diagnostics and visualization for validating MCMC/nested sampling outputs. ArviZ provides R-hat convergence diagnostics, effective sample size estimates, posterior predictive checks, and trace plots to validate that inference chains have converged and that parameter estimates are reliable.",
+        "relevance": "The planned parameter recovery pipeline will produce MCMC chains (emcee) or nested sampling results (dynesty/UltraNest). ArviZ provides R-hat convergence diagnostics, effective sample size estimates, posterior predictive checks, and trace plots to validate that inference chains have converged and that parameter estimates are reliable. Compatible with emcee, dynesty, PyMC, and NumPyro outputs via InferenceData format.",
+        "sources": [
+          {
+            "title": "ArviZ GitHub repository (arviz-devs/arviz)",
+            "url": "https://github.com/arviz-devs/arviz"
+          },
+          {
+            "title": "ArviZ documentation",
+            "url": "https://python.arviz.org/"
+          }
+        ],
+        "corroboration": "corroborated"
+      },
+      {
+        "idea": "joblib: Parallel job execution with transparent result caching and memory-mapped NumPy array support. ensemble_runner.py uses Python multiprocessing with manual JSON checkpointing and per-member file I/O. joblib.Parallel replaces multiprocessing.Pool with a simpler API, its Memory decorator transparently caches expensive simulation results to disk, and its memory mapping eliminates copy overhead for large NumPy arrays shared across workers.",
+        "relevance": "ensemble_runner.py uses Python multiprocessing with manual JSON checkpointing and per-member file I/O. joblib.Parallel replaces multiprocessing.Pool with a simpler API, its Memory decorator transparently caches expensive simulation results to disk (enabling re-analysis with different detection thresholds without re-running simulations), and its memory mapping eliminates copy overhead for large NumPy position/velocity arrays shared across workers.",
+        "sources": [
+          {
+            "title": "joblib GitHub repository (joblib/joblib)",
+            "url": "https://github.com/joblib/joblib"
+          },
+          {
+            "title": "joblib documentation on ReadTheDocs",
+            "url": "https://joblib.readthedocs.io/"
+          },
+          {
+            "title": "joblib.Parallel API reference",
+            "url": "https://joblib.readthedocs.io/en/stable/generated/joblib.Parallel.html"
+          }
+        ],
+        "corroboration": "corroborated"
+      },
+      {
+        "idea": "Dask: Distributed out-of-core computing for scaling Monte Carlo ensembles to HPC clusters. ensemble_runner.py is bounded to a single machine via multiprocessing. Dask scales the same embarrassingly-parallel ensemble to HPC clusters via dask-jobqueue with minimal code changes and integrates with zarr for efficient parallel ensemble output storage.",
+        "relevance": "ensemble_runner.py is bounded to a single machine via multiprocessing. Dask scales the same embarrassingly-parallel ensemble to HPC clusters via dask-jobqueue (SLURM, PBS, SGE) with minimal code changes, provides out-of-core computation for ensembles larger than available RAM, and integrates with zarr for efficient parallel ensemble output storage. This directly enables the 10^4-10^6 member ensembles needed for statistically significant detection rate estimates at the detection-rate precision required by the paper.",
+        "sources": [
+          {
+            "title": "Dask documentation",
+            "url": "https://docs.dask.org/"
+          },
+          {
+            "title": "Dask embarrassingly parallel workloads example",
+            "url": "https://examples.dask.org/applications/embarrassingly-parallel.html"
+          },
+          {
+            "title": "Dask array tutorial",
+            "url": "https://tutorial.dask.org/02_array.html"
+          }
+        ],
+        "corroboration": "corroborated"
+      },
+      {
+        "idea": "Ray: Distributed actor model for stateful parallel simulation workers with fault tolerance. Ray's Actor model enables persistent REBOUND simulation state across method calls (avoiding repeated integrator initialization overhead per ensemble member) and scales from laptop to cloud clusters with built-in fault tolerance.",
+        "relevance": "Ray's Actor model enables persistent REBOUND simulation state across method calls (avoiding repeated integrator initialization overhead per ensemble member) and scales from laptop to cloud clusters. Ray's built-in fault tolerance (actor restart on failure) is valuable for long Monte Carlo runs where individual worker failures would otherwise lose progress. Alternative to Dask when fine-grained stateful parallelism is preferred over bulk data-parallel computation.",
+        "sources": [
+          {
+            "title": "Ray GitHub repository (ray-project/ray)",
+            "url": "https://github.com/ray-project/ray"
+          },
+          {
+            "title": "Ray documentation (ray-overview/getting-started)",
+            "url": "https://docs.ray.io/en/latest/ray-overview/getting-started.html"
+          }
+        ],
+        "corroboration": "corroborated"
+      },
+      {
+        "idea": "h5py: HDF5 Python bindings to replace per-member .npz + .json file storage with a single hierarchical file. ensemble_runner.py writes one residuals.npz + summary.json per ensemble member, creating thousands of small files for large runs — a known bottleneck on HPC parallel file systems.",
+        "relevance": "ensemble_runner.py writes one residuals.npz + summary.json per ensemble member, creating thousands of small files for large runs — a known bottleneck on HPC parallel file systems. h5py provides a single HDF5 file with hierarchical groups (one per member) containing compressed residual arrays and metadata, built-in chunked partial I/O (load one member without reading all), and parallel read/write via MPI. HDF5 is the standard storage format in computational astrophysics (GADGET, FLASH, Illustris all use HDF5).",
+        "sources": [
+          {
+            "title": "h5py GitHub repository (h5py/h5py)",
+            "url": "https://github.com/h5py/h5py"
+          },
+          {
+            "title": "h5py documentation",
+            "url": "https://docs.h5py.org/"
+          },
+          {
+            "title": "h5py on PyPI",
+            "url": "https://pypi.org/project/h5py/"
+          }
+        ],
+        "corroboration": "corroborated"
+      },
+      {
+        "idea": "zarr: Chunked, compressed, cloud-native N-dimensional array storage as an alternative to h5py for ensemble outputs. zarr provides chunk-level compression and cloud-native storage (S3, GCS, local disk — same API) enabling ensemble outputs to be stored and analyzed across distributed systems with native Dask integration.",
+        "relevance": "zarr provides chunk-level compression and cloud-native storage (S3, GCS, local disk — same API) enabling ensemble outputs to be stored and analyzed across distributed systems. Its native Dask integration means ensemble residual arrays can be lazily loaded and analyzed in parallel without writing custom chunked I/O code. Particularly advantageous when combining with Dask-based ensemble execution for end-to-end scalable pipelines.",
+        "sources": [
+          {
+            "title": "zarr Python documentation on ReadTheDocs",
+            "url": "https://zarr.readthedocs.io/"
+          },
+          {
+            "title": "zarr-developers GitHub organization",
+            "url": "https://github.com/zarr-developers"
+          }
+        ],
+        "corroboration": "corroborated"
+      },
+      {
+        "idea": "numba: JIT compilation for 10-100x speedup of hot numerical loops in analytic_impulse and residual_analysis. Adding @numba.jit decorators compiles the calculate_velocity_kick function and compute_residuals to machine code at first call using LLVM, achieving C-level performance without rewriting in C.",
+        "relevance": "The analytic_impulse.calculate_velocity_kick function and compute_residuals in residual_analysis.py are called once per ensemble member in the tight ensemble loop. Adding @numba.jit decorators compiles these to machine code at first call using LLVM, achieving C-level performance without rewriting in C. The @jit(parallel=True) variant additionally auto-parallelizes inner loops. For large ensembles, this directly reduces total wall-clock time proportionally to the fraction of time spent in these functions.",
+        "sources": [
+          {
+            "title": "Numba official website",
+            "url": "https://numba.pydata.org/"
+          },
+          {
+            "title": "Numba 5-minute guide on ReadTheDocs",
+            "url": "https://numba.readthedocs.io/en/stable/user/5minguide.html"
+          }
+        ],
+        "corroboration": "corroborated"
+      },
+      {
+        "idea": "Hypothesis: Property-based testing library for validating physics invariants across automatically-generated parameter ranges. Hypothesis auto-generates diverse input combinations to verify that: (1) calculate_velocity_kick scales linearly with PBH mass, (2) delta_v direction is perpendicular to relative velocity at closest approach, (3) baseline-vs-baseline residuals are exactly zero, (4) impact parameter b > 0 always produces a finite kick magnitude.",
+        "relevance": "The project has only one placeholder test. Hypothesis auto-generates diverse input combinations to verify that: (1) calculate_velocity_kick scales linearly with PBH mass (a known analytic invariant from Eq. 2 of the paper), (2) delta_v direction is perpendicular to relative velocity at closest approach, (3) baseline-vs-baseline residuals are exactly zero, (4) impact parameter b > 0 always produces a finite kick magnitude. These properties cannot be verified by hand-picked test inputs and cover edge cases (near-zero b, very high velocity) that are likely sources of numerical bugs.",
+        "sources": [
+          {
+            "title": "Hypothesis GitHub repository (HypothesisWorks/hypothesis)",
+            "url": "https://github.com/HypothesisWorks/hypothesis"
+          },
+          {
+            "title": "Hypothesis documentation at hypothesis.works",
+            "url": "https://hypothesis.works"
+          }
+        ],
+        "corroboration": "corroborated"
+      },
+      {
+        "idea": "pytest-benchmark: Performance regression testing for N-body integration and residual computation kernels. pytest-benchmark integrates directly into the existing pytest setup to benchmark calculate_velocity_kick, NBodySimulation.integrate, and compute_residuals per code change, preventing inadvertent performance regressions as the ensemble size scales up.",
+        "relevance": "The project has no performance tracking; pytest.ini configures only basic verbose output. pytest-benchmark integrates directly into the existing pytest setup to benchmark calculate_velocity_kick, NBodySimulation.integrate, and compute_residuals per code change. This prevents inadvertent performance regressions as the ensemble size scales up, and provides data for justifying the numba JIT or Dask parallelism upgrades.",
+        "sources": [
+          {
+            "title": "pytest-benchmark GitHub repository (ionelmc/pytest-benchmark)",
+            "url": "https://github.com/ionelmc/pytest-benchmark"
+          },
+          {
+            "title": "pytest-benchmark documentation on ReadTheDocs",
+            "url": "https://pytest-benchmark.readthedocs.io/en/latest/usage.html"
+          }
+        ],
+        "corroboration": "corroborated"
+      },
+      {
+        "idea": "numpy.testing module: Tolerance-aware numerical array assertions for validating simulation outputs against analytical references. numpy.testing.assert_allclose provides rtol/atol-parameterized comparison of multi-dimensional position and velocity arrays, essential for regression tests comparing REBOUND outputs against known Keplerian solutions, energy conservation checks, and impulse approximation limiting cases.",
+        "relevance": "numpy.testing.assert_allclose provides rtol/atol-parameterized comparison of multi-dimensional position and velocity arrays, essential for writing regression tests that compare REBOUND outputs against known Keplerian solutions (circular orbit, two-body problem), energy conservation checks, and impulse approximation limiting cases. More informative than plain assert statements for diagnosing numerical failures in N-body simulations.",
+        "sources": [
+          {
+            "title": "NumPy testing utilities documentation",
+            "url": "https://numpy.org/doc/stable/reference/testing.html"
+          }
+        ],
+        "corroboration": "single-source"
+      },
+      {
+        "idea": "pytest-cov and codecov: Test coverage measurement to identify the full extent of uncovered code in the near-empty test suite. pytest-cov generates line-level coverage reports showing exactly which branches of n_body_simulation.py, analytic_impulse.py, ensemble_runner.py, and residual_analysis.py are untested.",
+        "relevance": "The project has one meaningful test (directory existence) and one empty placeholder test body (pass). pytest-cov generates line-level coverage reports showing exactly which branches of n_body_simulation.py, analytic_impulse.py, ensemble_runner.py, and residual_analysis.py are untested, guiding systematic test development. Integration with codecov provides per-PR coverage tracking to prevent coverage regressions as tests are added.",
+        "sources": [
+          {
+            "title": "pytest-cov on PyPI",
+            "url": "https://pypi.org/project/pytest-cov/"
+          },
+          {
+            "title": "codecov GitHub (codecov/codecov-python)",
+            "url": "https://github.com/codecov/codecov-python"
+          }
+        ],
+        "corroboration": "corroborated"
+      },
+      {
+        "idea": "Sorcha: LSST/Rubin Observatory Solar System survey simulator for generating physically realistic synthetic observations. Sorcha is a modular LSST-designed catalog-level simulator that generates synthetic astrometric and photometric observations with physically motivated noise models calibrated to actual Rubin Observatory performance.",
+        "relevance": "The synthetic_data.py module adds a single isotropic Gaussian noise_std_dev to all residuals, ignoring survey cadence, detection efficiency, and position-dependent measurement uncertainty. Sorcha is a modular LSST-designed catalog-level simulator that generates synthetic astrometric and photometric observations with physically motivated noise models calibrated to actual Rubin Observatory performance. This strengthens parameter recovery tests by simulating what a real astrometric survey would observe rather than idealized Gaussian noise.",
+        "sources": [
+          {
+            "title": "Sorcha GitHub repository (dirac-institute/sorcha)",
+            "url": "https://github.com/dirac-institute/sorcha"
+          },
+          {
+            "title": "Sorcha documentation",
+            "url": "https://sorcha.readthedocs.io/"
+          },
+          {
+            "title": "Sorcha add-ons package documentation",
+            "url": "https://sorcha-addons.readthedocs.io/"
+          }
+        ],
+        "corroboration": "corroborated"
+      },
+      {
+        "idea": "PyGaia: Gaia astrometric uncertainty propagation for modeling realistic epoch-dependent, correlated measurement noise. PyGaia implements covariance matrix propagation for astrometric uncertainties through the EpochPropagation class, enabling epoch-dependent and spatially-correlated noise models matching Gaia DR3 and future releases.",
+        "relevance": "synthetic_data.py adds uncorrelated Gaussian noise with a single fixed noise_std_dev for positions and velocities. PyGaia implements covariance matrix propagation for astrometric uncertainties through the EpochPropagation class, enabling epoch-dependent and spatially-correlated noise models matching Gaia DR3 and future releases. This is critical for validating that the parameter recovery pipeline works under realistic covariance structure rather than idealized white noise.",
+        "sources": [
+          {
+            "title": "PyGaia GitHub repository (agabrown/PyGaia)",
+            "url": "https://github.com/agabrown/PyGaia"
+          },
+          {
+            "title": "PyGaia documentation on ReadTheDocs",
+            "url": "https://pygaia.readthedocs.io/"
+          }
+        ],
+        "corroboration": "corroborated"
+      }
+    ],
+    "saturation": "Returns are significantly diminishing after the first ~12 items: the core physics papers (Tran et al. 2023, Thoss & Burkert 2024, REBOUND integrators, DM density priors, mass-constraint reviews) and the two critical unused-dependency gaps (emcee, dynesty) are the highest-value findings; the infrastructure and tooling items (items 27–43, Bilby through PyGaia) are real and useful but represent incremental additions to an already well-populated toolbox with no remaining blind spots in the physics modeling layer."
+  }
+}
+```
+</details>
