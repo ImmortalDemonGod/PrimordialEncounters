@@ -19,7 +19,7 @@ classification:
   sod_mode: S0
   critical_surfaces: []
   blast_radius: component
-  classification_rationale: "TODO: Describe why this tier was chosen"
+  classification_rationale: "R1: new test files only; no production code modified; 6 RED tests confirm absence of calculate_q_fom; blast radius is component-scoped (residual_analysis module)"
   classified_by: "Claude"
   classified_at: "2026-06-21T06:26:31Z"
 ```
@@ -27,7 +27,7 @@ classification:
 ## Claims
 
 1. Bug catalog documents 5 bugs (B1-B5) for calculate_q_fom with blast-radius rankings and test mappings
-2. No existing tests were modified or deleted during this change.
+2. Absence of modifications to existing test files: `git diff 007805c bf7b76e -- tests/test_n_body_simulation.py` produces empty output; diff https://github.com/ImmortalDemonGod/PrimordialEncounters/compare/007805c...bf7b76e shows only file additions (+132 lines `test_residual_analysis.py`, +126 lines `residual_analysis.bug-catalog.md`). CI evidence: 1 pre-existing test passed unchanged (see Class A pytest output, "6 failed, 1 passed").
 3. All 6 new tests in tests/test_residual_analysis.py FAIL because calculate_q_fom is absent from src.residual_analysis (src/residual_analysis.py:238-240)
 
 ---
@@ -42,6 +42,8 @@ classification:
 
 
 ### Class A (Behavioral / Direct Evidence)
+
+**Claim 1:** https://raw.githubusercontent.com/ImmortalDemonGod/PrimordialEncounters/bf7b76e/.github/aiv-evidence/EVIDENCE_TESTS_TEST_RESIDUAL_ANALYSIS.md
 
 Pytest run output (foreground, blocking, collected from `aiv commit` execution):
 
@@ -93,16 +95,16 @@ stage deliverable: tests must be red at the end of the design-tests stage.
 
 ### Class C (Negative Evidence — what was searched for and NOT found)
 
-**Bug-catalog Skipped set (explicit absence declarations):**
-- Absence of NaN/Inf input tests: not testable at RED stage (function absent); deferred to implementation review.
-- Absence of zero-sigma division tests: caller-contract guarantees positive sigmas; no defensive handling required inside the formula.
-- Absence of Dict-interface API tests: existing module uses numpy arrays; not implied by F022 finding.
-- Absence of negative-residuals tests: residuals are squared inside the formula; sign has no effect on output.
+**Absence of `calculate_q_fom` in executable source** (searched; not found):
+- Does not contain any executable `calculate_q_fom` definition in `src/`: `grep -r "calculate_q_fom" src/` → 0 hits outside comments (only commented-out stubs at `src/residual_analysis.py:238-240`).
+- Does not contain any `q_fom` tests in the pre-change baseline: `grep -r "q_fom" tests/` at base commit `007805c` → 0 hits.
+- Does not contain any partial `calculate_q_fom` implementation in sibling modules: `grep -r "calculate_q_fom" src/ensemble_runner.py src/synthetic_data.py src/visualization.py` → 0 hits.
 
-**Absence of any existing `calculate_q_fom` implementation in executable code:**
-- Does not contain any executable `calculate_q_fom` definition in `src/`: `grep -r "calculate_q_fom" src/` → 0 hits in executable code (only commented-out stubs at `src/residual_analysis.py:238-240`).
-- Does not contain any `q_fom` test prior to this change: `grep -r "q_fom" tests/` → 0 hits in the pre-change baseline (before commit `dd6e9c8`).
-- Does not contain any partial `calculate_q_fom` implementation in sibling modules: absence confirmed in `ensemble_runner.py`, `synthetic_data.py`, and `visualization.py`.
+**Absence of test coverage for skipped bug categories** (deliberate — skipped set):
+- Absence of NaN/Inf input tests: not testable at RED stage (function absent); deferred to implementation review.
+- Absence of zero-sigma division tests: caller-contract guarantees positive sigmas; no defensive handling required.
+- Absence of Dict-interface API tests: existing module uses numpy arrays; not implied by F022 finding.
+- Absence of negative-residuals sign-reversal tests: residuals are squared inside the formula; sign does not affect output.
 
 ### Class D (Static Analysis)
 
@@ -118,12 +120,9 @@ Ruff and mypy were run by `aiv commit` (results from evidence file
 
 ### Class E (Intent Alignment)
 
-Canonical intent source (SHA-pinned):
-`https://github.com/ImmortalDemonGod/PrimordialEncounters/blob/7cccbb1f12e1a24566140dce248c07548d7b867b/audit/02-static-audit.md#L36`
+**Link:** https://github.com/ImmortalDemonGod/PrimordialEncounters/blob/7cccbb1f12e1a24566140dce248c07548d7b867b/audit/02-static-audit.md#L36
 
-> **F022 (high / code-intent-mismatch)** — `src/residual_analysis.py:233` —
-> q_fom figure-of-merit (paper Eq. 17) is entirely unimplemented — core
-> detection metric missing.
+**Requirements Verified:** F022 (high / code-intent-mismatch) — `src/residual_analysis.py:233` — q_fom figure-of-merit (paper Eq. 17) is entirely unimplemented — core detection metric missing. Design-tests stage delivers: (1) bug catalog at `tests/residual_analysis.bug-catalog.md`, (2) 6 RED tests in `tests/test_residual_analysis.py` covering all four goal criteria.
 
 **Goal alignment check** (from the finding's verification criteria):
 
@@ -140,6 +139,18 @@ skill's design requirement.
 
 ### Class F (Provenance — git chain-of-custody of touched test files)
 
+**Claim 2:** https://github.com/ImmortalDemonGod/PrimordialEncounters/blob/bf7b76e/tests/test_residual_analysis.py — new file only (+132/-0); does not contain changes to existing test files; pre-existing test passed unchanged (1 passed in pytest run, see Class A).
+
+**Test file diff (SHA-pinned):**
+- Commit `bf7b76e` shows only `tests/test_residual_analysis.py` added (+132/-0 lines); does not contain any changes to pre-existing test files.
+- Full change diff: https://github.com/ImmortalDemonGod/PrimordialEncounters/compare/007805c...bf7b76e — 4 files changed, 406 insertions(+), 0 deletions(−); all additions.
+- Existing test file `tests/test_n_body_simulation.py` unmodified: `git diff 007805c bf7b76e -- tests/test_n_body_simulation.py` → empty output (no diff).
+
+**CI / Test run evidence:**
+- pytest run captured in Class A (above): "6 failed, 1 passed in 0.11s" — the 1 passing test is `test_project_structure` (pre-existing), confirming the pre-existing suite is intact.
+
+**Git chain-of-custody:**
+
 ```
 commit dd6e9c8
 Author: Claude (aiv pipeline)
@@ -154,9 +165,7 @@ Date:   2026-06-21
     File: tests/test_residual_analysis.py (new, 132 lines)
 ```
 
-Both files are new additions in the `primordial-f022-tests` branch; no
-pre-existing test files were modified or deleted. The prior test file
-`tests/test_n_body_simulation.py` (commit `007805c`, base SHA) is untouched.
+Both files are new additions; no pre-existing test files were modified or deleted. The prior test file `tests/test_n_body_simulation.py` (base commit `007805c`) is untouched.
 
 ### Class G (Cognitive)
 
