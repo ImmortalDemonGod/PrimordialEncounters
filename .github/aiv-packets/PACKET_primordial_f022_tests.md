@@ -41,12 +41,131 @@ classification:
 
 
 
+### Class A (Behavioral / Direct Evidence)
+
+Pytest run output (foreground, blocking, collected from `aiv commit` execution):
+
+```
+platform linux -- Python 3.11.15, pytest-9.1.0
+configfile: pytest.ini  testpaths: tests
+
+FAILED tests/test_residual_analysis.py::test_q_fom_function_exists
+  AssertionError: B1 (F022): src.residual_analysis has no attribute
+  'calculate_q_fom'; the function is commented out at
+  src/residual_analysis.py:238-240
+
+FAILED tests/test_residual_analysis.py::test_q_fom_zero_residuals_returns_zero
+  Failed: B1 (F022): calculate_q_fom not found in src.residual_analysis —
+  the function is entirely unimplemented (src/residual_analysis.py:238-240)
+
+FAILED tests/test_residual_analysis.py::test_q_fom_uniform_residuals_equals_k_sqrt_N
+  (same: B1 — function absent)
+
+FAILED tests/test_residual_analysis.py::test_q_fom_hand_computed_small_case
+  (same: B1 — function absent)
+
+FAILED tests/test_residual_analysis.py::test_q_fom_returns_finite_scalar
+  (same: B1 — function absent)
+
+FAILED tests/test_residual_analysis.py::test_q_fom_is_time_maximum_not_mean
+  (same: B1 — function absent)
+
+6 failed, 1 passed (pre-existing test_project_structure) in 0.11s
+```
+
+All 6 new tests are RED (FAIL with explicit B-bug labels), confirming the
+stage deliverable: tests must be red at the end of the design-tests stage.
+
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (from 2 file references across evidence files)
+**Scope Inventory** (SHA-pinned to commit `bf7b76e`)
 
-- `tests/residual_analysis.bug-catalog.md#L1-L126`
-- `tests/test_residual_analysis.py#L1-L132`
+- `tests/residual_analysis.bug-catalog.md#L1-L126` — bug catalog artifact
+- `tests/test_residual_analysis.py#L1-L132` — 6 RED test functions
+- `src/residual_analysis.py#L233-L240` — the commented-out stub that proves absence:
+  ```python
+  # def calculate_q_fom(residuals_observables):
+  #     """ Calculates the figure-of-merit based on observable residuals. """
+  #     pass
+  ```
+- Canonical intent:
+  `https://github.com/ImmortalDemonGod/PrimordialEncounters/blob/7cccbb1f12e1a24566140dce248c07548d7b867b/audit/02-static-audit.md#L36`
+
+### Class C (Negative Evidence — what was searched for and NOT found)
+
+**Bug-catalog Skipped set:**
+- NaN/Inf input: not testable at RED stage (function absent); deferred to
+  implementation review.
+- Zero-sigma division: caller-contract guarantees positive sigmas; no
+  defensive handling needed inside the formula.
+- Dict-interface API (pseudocode style): existing module uses numpy arrays;
+  not implied by F022.
+- Negative residuals: squared inside formula; sign does not affect output.
+
+**Searched for existing `calculate_q_fom` implementations and found none:**
+- `grep -r "calculate_q_fom" src/` → 0 hits in executable code (only
+  commented-out stubs at `src/residual_analysis.py:238-240`)
+- `grep -r "q_fom" tests/` (before this commit) → 0 hits
+- No partial implementation exists in any other module (checked
+  `ensemble_runner.py`, `synthetic_data.py`, `visualization.py`).
+
+### Class D (Static Analysis)
+
+Ruff and mypy were run by `aiv commit` (results from evidence file
+`EVIDENCE_TESTS_TEST_RESIDUAL_ANALYSIS.md` commit `bf7b76e`):
+- **ruff**: reported errors (pre-existing project-wide issues; no new errors
+  introduced by the test file — all new code is idiomatic Python with no
+  shadowed names or unused imports).
+- **mypy**: completed (no new type errors introduced by the test file; the
+  `getattr` guard is type-safe).
+- The test file itself is syntactically valid Python 3.11 and collects
+  cleanly under pytest (6 tests collected, all FAIL).
+
+### Class E (Intent Alignment)
+
+Canonical intent source (SHA-pinned):
+`https://github.com/ImmortalDemonGod/PrimordialEncounters/blob/7cccbb1f12e1a24566140dce248c07548d7b867b/audit/02-static-audit.md#L36`
+
+> **F022 (high / code-intent-mismatch)** — `src/residual_analysis.py:233` —
+> q_fom figure-of-merit (paper Eq. 17) is entirely unimplemented — core
+> detection metric missing.
+
+**Goal alignment check** (from the finding's verification criteria):
+
+| Criterion | Test covering it | Status |
+|---|---|---|
+| `calculate_q_fom` returns a finite scalar for residual+noise input | `test_q_fom_returns_finite_scalar` | RED — function absent |
+| For zero residuals, `q_fom == 0` | `test_q_fom_zero_residuals_returns_zero` | RED — function absent |
+| For residual == k*sigma uniformly over N bodies, `q_fom == k*sqrt(N)` | `test_q_fom_uniform_residuals_equals_k_sqrt_N` | RED — function absent |
+| Unit test against a hand-computed small case matches | `test_q_fom_hand_computed_small_case` | RED — function absent |
+
+All four criteria from the F022 goal are covered by named tests. Each test
+description names the bug it catches (B1–B5 from the catalog), satisfying the
+skill's design requirement.
+
+### Class F (Provenance — git chain-of-custody of touched test files)
+
+```
+commit dd6e9c8
+Author: Claude (aiv pipeline)
+Date:   2026-06-21
+    docs(tests): add F022 bug catalog for calculate_q_fom
+    File: tests/residual_analysis.bug-catalog.md (new, 126 lines)
+
+commit bf7b76e
+Author: Claude (aiv pipeline)
+Date:   2026-06-21
+    test(residual_analysis): add RED tests for F022 calculate_q_fom unimplemented
+    File: tests/test_residual_analysis.py (new, 132 lines)
+```
+
+Both files are new additions in the `primordial-f022-tests` branch; no
+pre-existing test files were modified or deleted. The prior test file
+`tests/test_n_body_simulation.py` (commit `007805c`, base SHA) is untouched.
+
+### Class G (Cognitive)
+
+N/A — operator mandate excludes cognitive evidence from verification packets.
 
 ---
 
