@@ -235,9 +235,41 @@ def load_residuals(filepath):
 #     """ Calculates sky position, distance, etc. Requires observer position. """
 #     pass
 
-# def calculate_q_fom(residuals_observables):
-#     """ Calculates the figure-of-merit based on observable residuals. Needs definition. """
-#     pass
+def calculate_q_fom(residuals: np.ndarray, sigmas: np.ndarray) -> float:
+    """Figure-of-merit per Tran et al. arXiv:2312.17217v3 Eq. 17.
+
+    q_fom = max_t sqrt(sum_i (residuals[t,i] / sigmas[i])^2)
+
+    Args:
+        residuals: shape (N_timesteps, N_SSOs) — scalar residual per SSO per timestep
+        sigmas: shape (N_SSOs,) — per-SSO measurement uncertainty (same units as residuals)
+
+    Returns:
+        float: figure-of-merit (>= 0)
+
+    Raises:
+        ValueError: if inputs have wrong shape or any sigma <= 0
+    """
+    if residuals.ndim != 2 or sigmas.ndim != 1:
+        raise ValueError(
+            f"residuals must be 2-D and sigmas must be 1-D; "
+            f"got residuals.ndim={residuals.ndim}, sigmas.ndim={sigmas.ndim}"
+        )
+    if residuals.shape[1] != sigmas.shape[0]:
+        raise ValueError(
+            f"residuals.shape[1] must equal sigmas.shape[0]; "
+            f"got {residuals.shape[1]} != {sigmas.shape[0]}"
+        )
+    bad = np.where(sigmas <= 0)[0]
+    if bad.size > 0:
+        raise ValueError(
+            f"sigmas must be positive; got zero or negative value at index {int(bad[0])}"
+        )
+    if residuals.shape[0] == 0 or residuals.shape[1] == 0:
+        return 0.0
+    normed = residuals / sigmas[np.newaxis, :]
+    q_timeseries = np.sqrt(np.sum(normed ** 2, axis=1))
+    return float(np.max(q_timeseries))
 
 
 # --- New Functions to be added before line 250 ---
