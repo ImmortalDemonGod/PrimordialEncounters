@@ -1,0 +1,21 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.15, pytest-9.1.0, pluggy-1.6.0 -- /usr/local/bin/python
+cachedir: .pytest_cache
+rootdir: /root/PrimordialEncounters-primordial-F022
+configfile: pytest.ini
+plugins: anyio-4.14.0
+collecting ... collected 11 items
+
+tests/test_residual_analysis.py::test_q_fom_function_exists PASSED       [  9%]
+tests/test_residual_analysis.py::test_q_fom_zero_residuals_returns_zero PASSED [ 18%]
+tests/test_residual_analysis.py::test_q_fom_uniform_residuals_equals_k_sqrt_N PASSED [ 27%]
+tests/test_residual_analysis.py::test_q_fom_hand_computed_small_case PASSED [ 36%]
+tests/test_residual_analysis.py::test_q_fom_returns_finite_scalar PASSED [ 45%]
+tests/test_residual_analysis.py::test_q_fom_is_time_maximum_not_mean PASSED [ 54%]
+tests/test_residual_analysis.py::test_zero_residuals PASSED              [ 63%]
+tests/test_residual_analysis.py::test_analytic_uniform PASSED            [ 72%]
+tests/test_residual_analysis.py::test_invalid_zero_sigma PASSED          [ 81%]
+tests/test_residual_analysis.py::test_empty_timesteps PASSED             [ 90%]
+tests/test_residual_analysis.py::test_single_sso_single_timestep PASSED  [100%]
+
+============================== 11 passed in 0.08s ==============================

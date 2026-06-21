@@ -1,0 +1,231 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.15, pytest-9.1.0, pluggy-1.6.0 -- /usr/local/bin/python
+cachedir: .pytest_cache
+rootdir: /tmp/primordial-F022_base
+configfile: pytest.ini
+plugins: anyio-4.14.0
+collecting ... collected 11 items
+
+tests/test_residual_analysis.py::test_q_fom_function_exists FAILED       [  9%]
+tests/test_residual_analysis.py::test_q_fom_zero_residuals_returns_zero FAILED [ 18%]
+tests/test_residual_analysis.py::test_q_fom_uniform_residuals_equals_k_sqrt_N FAILED [ 27%]
+tests/test_residual_analysis.py::test_q_fom_hand_computed_small_case FAILED [ 36%]
+tests/test_residual_analysis.py::test_q_fom_returns_finite_scalar FAILED [ 45%]
+tests/test_residual_analysis.py::test_q_fom_is_time_maximum_not_mean FAILED [ 54%]
+tests/test_residual_analysis.py::test_zero_residuals FAILED              [ 63%]
+tests/test_residual_analysis.py::test_analytic_uniform FAILED            [ 72%]
+tests/test_residual_analysis.py::test_invalid_zero_sigma FAILED          [ 81%]
+tests/test_residual_analysis.py::test_empty_timesteps FAILED             [ 90%]
+tests/test_residual_analysis.py::test_single_sso_single_timestep FAILED  [100%]
+
+=================================== FAILURES ===================================
+__________________________ test_q_fom_function_exists __________________________
+
+    def test_q_fom_function_exists():
+        """B1: calculate_q_fom missing from module — guards against F022 remaining unimplemented."""
+>       assert hasattr(_mod, "calculate_q_fom"), (
+            "B1 (F022): src.residual_analysis has no attribute 'calculate_q_fom'; "
+            "the function is commented out at src/residual_analysis.py:238-240"
+        )
+E       AssertionError: B1 (F022): src.residual_analysis has no attribute 'calculate_q_fom'; the function is commented out at src/residual_analysis.py:238-240
+E       assert False
+E        +  where False = hasattr(_mod, 'calculate_q_fom')
+
+tests/test_residual_analysis.py:39: AssertionError
+____________________ test_q_fom_zero_residuals_returns_zero ____________________
+
+    def test_q_fom_zero_residuals_returns_zero():
+        """B1+B4: zero residuals must yield q_fom==0 — guards against missing function and missing sigma normalisation."""
+>       calculate_q_fom = _require_q_fom()
+                          ^^^^^^^^^^^^^^^^
+
+tests/test_residual_analysis.py:47: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _require_q_fom():
+        """Fails immediately with a clear message if the function is still absent (B1)."""
+        fn = getattr(_mod, "calculate_q_fom", None)
+        if fn is None:
+>           pytest.fail(
+                "B1 (F022): calculate_q_fom not found in src.residual_analysis — "
+                "the function is entirely unimplemented (src/residual_analysis.py:238-240)"
+            )
+E           Failed: B1 (F022): calculate_q_fom not found in src.residual_analysis — the function is entirely unimplemented (src/residual_analysis.py:238-240)
+
+tests/test_residual_analysis.py:30: Failed
+_________________ test_q_fom_uniform_residuals_equals_k_sqrt_N _________________
+
+    def test_q_fom_uniform_residuals_equals_k_sqrt_N():
+        """B1+B2+B4: residual==k*sigma for all N bodies at all timesteps must give q_fom==k*sqrt(N).
+    
+        Derivation: q(t) = sqrt( sum_i (k*sigma_i / sigma_i)^2 ) = sqrt(N*k^2) = k*sqrt(N)
+        q_fom = max_t q(t) = k*sqrt(N).
+        A missing sqrt (B2) would give k^2*N; missing sigma division (B4) would give a different value.
+        """
+>       calculate_q_fom = _require_q_fom()
+                          ^^^^^^^^^^^^^^^^
+
+tests/test_residual_analysis.py:64: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _require_q_fom():
+        """Fails immediately with a clear message if the function is still absent (B1)."""
+        fn = getattr(_mod, "calculate_q_fom", None)
+        if fn is None:
+>           pytest.fail(
+                "B1 (F022): calculate_q_fom not found in src.residual_analysis — "
+                "the function is entirely unimplemented (src/residual_analysis.py:238-240)"
+            )
+E           Failed: B1 (F022): calculate_q_fom not found in src.residual_analysis — the function is entirely unimplemented (src/residual_analysis.py:238-240)
+
+tests/test_residual_analysis.py:30: Failed
+_____________________ test_q_fom_hand_computed_small_case ______________________
+
+    def test_q_fom_hand_computed_small_case():
+        """B1+B2+B3+B4: hand-verified 2-body 2-timestep case catches wrong formula, wrong aggregation, and missing normalisation.
+    
+        Setup:
+          sigmas = [1e-6, 2e-6]
+          t=0: residuals = [1e-6, 2e-6]  -> ratios [1, 1] -> q(0) = sqrt(2) ≈ 1.4142
+          t=1: residuals = [2e-6, 0.0]   -> ratios [2, 0] -> q(1) = sqrt(4) = 2.0
+        q_fom = max(sqrt(2), 2.0) = 2.0
+        """
+>       calculate_q_fom = _require_q_fom()
+                          ^^^^^^^^^^^^^^^^
+
+tests/test_residual_analysis.py:88: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _require_q_fom():
+        """Fails immediately with a clear message if the function is still absent (B1)."""
+        fn = getattr(_mod, "calculate_q_fom", None)
+        if fn is None:
+>           pytest.fail(
+                "B1 (F022): calculate_q_fom not found in src.residual_analysis — "
+                "the function is entirely unimplemented (src/residual_analysis.py:238-240)"
+            )
+E           Failed: B1 (F022): calculate_q_fom not found in src.residual_analysis — the function is entirely unimplemented (src/residual_analysis.py:238-240)
+
+tests/test_residual_analysis.py:30: Failed
+_______________________ test_q_fom_returns_finite_scalar _______________________
+
+    def test_q_fom_returns_finite_scalar():
+        """B1+B5: q_fom must be a finite Python/numpy scalar, not an array — guards against returning the full timeseries."""
+>       calculate_q_fom = _require_q_fom()
+                          ^^^^^^^^^^^^^^^^
+
+tests/test_residual_analysis.py:102: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _require_q_fom():
+        """Fails immediately with a clear message if the function is still absent (B1)."""
+        fn = getattr(_mod, "calculate_q_fom", None)
+        if fn is None:
+>           pytest.fail(
+                "B1 (F022): calculate_q_fom not found in src.residual_analysis — "
+                "the function is entirely unimplemented (src/residual_analysis.py:238-240)"
+            )
+E           Failed: B1 (F022): calculate_q_fom not found in src.residual_analysis — the function is entirely unimplemented (src/residual_analysis.py:238-240)
+
+tests/test_residual_analysis.py:30: Failed
+_____________________ test_q_fom_is_time_maximum_not_mean ______________________
+
+    def test_q_fom_is_time_maximum_not_mean():
+        """B1+B3: a single spike at one timestep must dominate — mean would return ~1/n_steps of the spike value.
+    
+        Setup: 5 time steps, 2 bodies, all-zero except one spike of 5.0 at t=4 for body0.
+        sigma=[1,1] so q(4)=5.0, q(t<4)=0. q_fom must be 5.0, not 5/5=1.0 (mean) or 1.0 (sum/5).
+        """
+>       calculate_q_fom = _require_q_fom()
+                          ^^^^^^^^^^^^^^^^
+
+tests/test_residual_analysis.py:122: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _require_q_fom():
+        """Fails immediately with a clear message if the function is still absent (B1)."""
+        fn = getattr(_mod, "calculate_q_fom", None)
+        if fn is None:
+>           pytest.fail(
+                "B1 (F022): calculate_q_fom not found in src.residual_analysis — "
+                "the function is entirely unimplemented (src/residual_analysis.py:238-240)"
+            )
+E           Failed: B1 (F022): calculate_q_fom not found in src.residual_analysis — the function is entirely unimplemented (src/residual_analysis.py:238-240)
+
+tests/test_residual_analysis.py:30: Failed
+_____________________________ test_zero_residuals ______________________________
+
+    def test_zero_residuals():
+        """Plan §12: zero residuals with unit sigmas must yield q_fom == 0.0 (exact)."""
+        residuals = np.zeros((5, 3))
+        sigmas = np.ones(3)
+>       result = _mod.calculate_q_fom(residuals, sigmas)
+                 ^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'src.residual_analysis' has no attribute 'calculate_q_fom'
+
+tests/test_residual_analysis.py:141: AttributeError
+____________________________ test_analytic_uniform _____________________________
+
+    def test_analytic_uniform():
+        """Plan §12: residual==k*sigma uniformly over N bodies → q_fom == k*sqrt(N).
+    
+        k=3, N=4, 1 timestep → expected = 3*sqrt(4) = 6.0 (locked by D2, sqrt form).
+        """
+        k = 3.0
+        N = 4
+        sigmas = np.ones(N)
+        residuals = np.array([k * sigmas])  # shape (1, 4)
+>       result = _mod.calculate_q_fom(residuals, sigmas)
+                 ^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'src.residual_analysis' has no attribute 'calculate_q_fom'
+
+tests/test_residual_analysis.py:154: AttributeError
+___________________________ test_invalid_zero_sigma ____________________________
+
+    def test_invalid_zero_sigma():
+        """Plan §12 / D3: zero sigma must raise ValueError (division by zero is not silent)."""
+        residuals = np.ones((2, 2))
+        sigmas = np.array([1.0, 0.0])
+        with pytest.raises(ValueError):
+>           _mod.calculate_q_fom(residuals, sigmas)
+            ^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'src.residual_analysis' has no attribute 'calculate_q_fom'
+
+tests/test_residual_analysis.py:163: AttributeError
+_____________________________ test_empty_timesteps _____________________________
+
+    def test_empty_timesteps():
+        """Plan §12 / D4: empty timestep axis must return 0.0 immediately."""
+        residuals = np.zeros((0, 3))
+        sigmas = np.ones(3)
+>       result = _mod.calculate_q_fom(residuals, sigmas)
+                 ^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'src.residual_analysis' has no attribute 'calculate_q_fom'
+
+tests/test_residual_analysis.py:170: AttributeError
+_______________________ test_single_sso_single_timestep ________________________
+
+    def test_single_sso_single_timestep():
+        """Plan §12: 1 SSO, 1 timestep, res=2.0, sigma=1.0 → sqrt(2^2) = 2.0 (D2 sqrt form)."""
+        residuals = np.array([[2.0]])
+        sigmas = np.array([1.0])
+>       result = _mod.calculate_q_fom(residuals, sigmas)
+                 ^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'src.residual_analysis' has no attribute 'calculate_q_fom'
+
+tests/test_residual_analysis.py:178: AttributeError
+=========================== short test summary info ============================
+FAILED tests/test_residual_analysis.py::test_q_fom_function_exists - AssertionError: B1 (F022): src.residual_analysis has no attribute 'calculate_q_fom'; the function is commented out at src/residual_analysis.py:238-240
+assert False
+ +  where False = hasattr(_mod, 'calculate_q_fom')
+FAILED tests/test_residual_analysis.py::test_q_fom_zero_residuals_returns_zero - Failed: B1 (F022): calculate_q_fom not found in src.residual_analysis — the function is entirely unimplemented (src/residual_analysis.py:238-240)
+FAILED tests/test_residual_analysis.py::test_q_fom_uniform_residuals_equals_k_sqrt_N - Failed: B1 (F022): calculate_q_fom not found in src.residual_analysis — the function is entirely unimplemented (src/residual_analysis.py:238-240)
+FAILED tests/test_residual_analysis.py::test_q_fom_hand_computed_small_case - Failed: B1 (F022): calculate_q_fom not found in src.residual_analysis — the function is entirely unimplemented (src/residual_analysis.py:238-240)
+FAILED tests/test_residual_analysis.py::test_q_fom_returns_finite_scalar - Failed: B1 (F022): calculate_q_fom not found in src.residual_analysis — the function is entirely unimplemented (src/residual_analysis.py:238-240)
+FAILED tests/test_residual_analysis.py::test_q_fom_is_time_maximum_not_mean - Failed: B1 (F022): calculate_q_fom not found in src.residual_analysis — the function is entirely unimplemented (src/residual_analysis.py:238-240)
+FAILED tests/test_residual_analysis.py::test_zero_residuals - AttributeError: module 'src.residual_analysis' has no attribute 'calculate_q_fom'
+FAILED tests/test_residual_analysis.py::test_analytic_uniform - AttributeError: module 'src.residual_analysis' has no attribute 'calculate_q_fom'
+FAILED tests/test_residual_analysis.py::test_invalid_zero_sigma - AttributeError: module 'src.residual_analysis' has no attribute 'calculate_q_fom'
+FAILED tests/test_residual_analysis.py::test_empty_timesteps - AttributeError: module 'src.residual_analysis' has no attribute 'calculate_q_fom'
+FAILED tests/test_residual_analysis.py::test_single_sso_single_timestep - AttributeError: module 'src.residual_analysis' has no attribute 'calculate_q_fom'
+============================== 11 failed in 0.12s ==============================
