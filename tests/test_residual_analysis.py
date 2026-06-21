@@ -130,3 +130,50 @@ def test_q_fom_is_time_maximum_not_mean():
         f"B1+B3: expected q_fom=5.0 (max over time), got {result!r}. "
         "A value near 1.0 indicates time-mean is used instead of time-max (B3)."
     )
+
+
+# --- Plan §12 required test functions (write-code stage) ---
+
+def test_zero_residuals():
+    """Plan §12: zero residuals with unit sigmas must yield q_fom == 0.0 (exact)."""
+    residuals = np.zeros((5, 3))
+    sigmas = np.ones(3)
+    result = _mod.calculate_q_fom(residuals, sigmas)
+    assert result == 0.0
+
+
+def test_analytic_uniform():
+    """Plan §12: residual==k*sigma uniformly over N bodies → q_fom == k*sqrt(N).
+
+    k=3, N=4, 1 timestep → expected = 3*sqrt(4) = 6.0 (locked by D2, sqrt form).
+    """
+    k = 3.0
+    N = 4
+    sigmas = np.ones(N)
+    residuals = np.array([k * sigmas])  # shape (1, 4)
+    result = _mod.calculate_q_fom(residuals, sigmas)
+    assert abs(result - 6.0) < 1e-10
+
+
+def test_invalid_zero_sigma():
+    """Plan §12 / D3: zero sigma must raise ValueError (division by zero is not silent)."""
+    residuals = np.ones((2, 2))
+    sigmas = np.array([1.0, 0.0])
+    with pytest.raises(ValueError):
+        _mod.calculate_q_fom(residuals, sigmas)
+
+
+def test_empty_timesteps():
+    """Plan §12 / D4: empty timestep axis must return 0.0 immediately."""
+    residuals = np.zeros((0, 3))
+    sigmas = np.ones(3)
+    result = _mod.calculate_q_fom(residuals, sigmas)
+    assert result == 0.0
+
+
+def test_single_sso_single_timestep():
+    """Plan §12: 1 SSO, 1 timestep, res=2.0, sigma=1.0 → sqrt(2^2) = 2.0 (D2 sqrt form)."""
+    residuals = np.array([[2.0]])
+    sigmas = np.array([1.0])
+    result = _mod.calculate_q_fom(residuals, sigmas)
+    assert abs(result - 2.0) < 1e-10
