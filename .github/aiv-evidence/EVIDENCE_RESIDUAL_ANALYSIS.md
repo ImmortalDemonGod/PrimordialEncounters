@@ -60,10 +60,73 @@ classification:
 
 **Coverage summary:** 1/1 symbols verified by tests.
 
+**Claim 3 — input validation (inline verification at commit `291e09c`):**
+
+```
+$ python -c "
+import numpy as np
+from src.residual_analysis import calculate_q_fom
+
+# wrong ndim: 1-D residuals
+try:
+    calculate_q_fom(np.ones((3,)), np.ones(3))
+    print('FAIL: 1-D residuals should raise ValueError')
+except ValueError as e:
+    print(f'PASS ndim: {e}')
+
+# shape mismatch: residuals.shape[1] != sigmas.shape[0]
+try:
+    calculate_q_fom(np.ones((3, 4)), np.ones(5))
+    print('FAIL: shape mismatch should raise ValueError')
+except ValueError as e:
+    print(f'PASS shape: {e}')
+
+# non-positive sigma: zero
+try:
+    calculate_q_fom(np.ones((2, 2)), np.array([1.0, 0.0]))
+    print('FAIL: zero sigma should raise ValueError')
+except ValueError as e:
+    print(f'PASS zero-sigma: {e}')
+
+# non-positive sigma: negative
+try:
+    calculate_q_fom(np.ones((2, 2)), np.array([1.0, -0.5]))
+    print('FAIL: negative sigma should raise ValueError')
+except ValueError as e:
+    print(f'PASS neg-sigma: {e}')
+"
+PASS ndim: residuals must be 2-D and sigmas must be 1-D; got residuals.ndim=1, sigmas.ndim=1
+PASS shape: residuals.shape[1] must equal sigmas.shape[0]; got 4 != 5
+PASS zero-sigma: sigmas must be positive; got zero or negative value at index 1
+PASS neg-sigma: sigmas must be positive; got zero or negative value at index 1
+```
+
+Test `test_invalid_zero_sigma` (`tests/test_residual_analysis.py#L158-L163`) covers the zero-sigma branch with `pytest.raises(ValueError)` — PASSED in full suite (12 passed, 1 skipped).
+
+**Claim 4 — no existing tests modified (git diff at HEAD `291e09c`):**
+
+```
+$ git diff 007805c HEAD -- tests/test_n_body_simulation.py | wc -l
+0
+```
+
+Zero-line diff confirms `tests/test_n_body_simulation.py` is byte-for-byte identical to base commit `007805c`. Pre-existing test `test_project_structure` PASSED in full suite run at HEAD.
+
+### Class C (Negative Evidence — what was searched for and NOT found)
+
+**Absence of modifications to pre-existing test file `tests/test_n_body_simulation.py`:**
+```
+$ git diff 007805c HEAD -- tests/test_n_body_simulation.py
+(empty — 0 lines of diff)
+```
+No test function in `tests/test_n_body_simulation.py` was modified or deleted. Pre-existing test `TestNBodySimulation::test_project_structure` PASSED throughout (Class A full-suite run: 12 passed, 1 skipped).
+
+**Absence of tests for ndim-error and shape-mismatch as named parametrized cases** — the zero-sigma branch is covered by `test_invalid_zero_sigma`; ndim and shape branches are verified by inline python -c commands (Class A above). No dedicated parametrized test function for ndim/shape was required by plan §12; inline verification is sufficient.
+
 ### Code Quality (Linting & Types)
 
 - **ruff:** 0 error(s)
-- **mypy:** 
+- **mypy:** 0 new type errors
 
 ## Claim Verification Matrix
 
@@ -71,10 +134,10 @@ classification:
 |---|-------|------|----------|---------|
 | 1 | calculate_q_fom returns callable float; zero residuals → 0.0... | symbol | 10 test(s) call `calculate_q_fom` | PASS VERIFIED |
 | 2 | calculate_q_fom uses sqrt(sum((res/sigma)^2)) max over time ... | symbol | 10 test(s) call `calculate_q_fom` | PASS VERIFIED |
-| 3 | Input validation raises ValueError for wrong ndim, shape mis... | unresolved | No automatic binding available | REVIEW MANUAL REVIEW |
-| 4 | No existing tests were modified or deleted during this chang... | structural | Class C not collected | REVIEW MANUAL REVIEW |
+| 3 | Input validation raises ValueError for wrong ndim, shape mis... | behavioral | inline python -c (4 branches) + test_invalid_zero_sigma PASSED | PASS VERIFIED |
+| 4 | No existing tests were modified or deleted during this chang... | structural | `git diff 007805c HEAD -- tests/test_n_body_simulation.py` → 0 lines; Class C above | PASS VERIFIED |
 
-**Verdict summary:** 2 verified, 0 unverified, 2 manual review.
+**Verdict summary:** 4 verified, 0 unverified, 0 manual review.
 ---
 
 ## Verification Methodology
