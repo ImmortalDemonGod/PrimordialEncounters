@@ -93,21 +93,16 @@ stage deliverable: tests must be red at the end of the design-tests stage.
 
 ### Class C (Negative Evidence — what was searched for and NOT found)
 
-**Bug-catalog Skipped set:**
-- NaN/Inf input: not testable at RED stage (function absent); deferred to
-  implementation review.
-- Zero-sigma division: caller-contract guarantees positive sigmas; no
-  defensive handling needed inside the formula.
-- Dict-interface API (pseudocode style): existing module uses numpy arrays;
-  not implied by F022.
-- Negative residuals: squared inside formula; sign does not affect output.
+**Bug-catalog Skipped set (explicit absence declarations):**
+- Absence of NaN/Inf input tests: not testable at RED stage (function absent); deferred to implementation review.
+- Absence of zero-sigma division tests: caller-contract guarantees positive sigmas; no defensive handling required inside the formula.
+- Absence of Dict-interface API tests: existing module uses numpy arrays; not implied by F022 finding.
+- Absence of negative-residuals tests: residuals are squared inside the formula; sign has no effect on output.
 
-**Searched for existing `calculate_q_fom` implementations and found none:**
-- `grep -r "calculate_q_fom" src/` → 0 hits in executable code (only
-  commented-out stubs at `src/residual_analysis.py:238-240`)
-- `grep -r "q_fom" tests/` (before this commit) → 0 hits
-- No partial implementation exists in any other module (checked
-  `ensemble_runner.py`, `synthetic_data.py`, `visualization.py`).
+**Absence of any existing `calculate_q_fom` implementation in executable code:**
+- Does not contain any executable `calculate_q_fom` definition in `src/`: `grep -r "calculate_q_fom" src/` → 0 hits in executable code (only commented-out stubs at `src/residual_analysis.py:238-240`).
+- Does not contain any `q_fom` test prior to this change: `grep -r "q_fom" tests/` → 0 hits in the pre-change baseline (before commit `dd6e9c8`).
+- Does not contain any partial `calculate_q_fom` implementation in sibling modules: absence confirmed in `ensemble_runner.py`, `synthetic_data.py`, and `visualization.py`.
 
 ### Class D (Static Analysis)
 
