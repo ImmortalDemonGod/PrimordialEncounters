@@ -260,10 +260,10 @@ def calculate_q_fom(residuals: np.ndarray, sigmas: np.ndarray) -> float:
             f"residuals.shape[1] must equal sigmas.shape[0]; "
             f"got {residuals.shape[1]} != {sigmas.shape[0]}"
         )
-    bad = np.where(sigmas <= 0)[0]
-    if bad.size > 0:
+    invalid_uncertainty_indices = np.where(sigmas <= 0)[0]
+    if invalid_uncertainty_indices.size > 0:
         raise ValueError(
-            f"sigmas must be positive; got zero or negative value at index {int(bad[0])}"
+            f"sigmas must be positive; got zero or negative value at index {int(invalid_uncertainty_indices[0])}"
         )
     if residuals.shape[0] == 0 or residuals.shape[1] == 0:
         return 0.0
