@@ -1,164 +1,133 @@
 # PrimordialEncounters
 
-A comprehensive **simulation and analysis framework** for detecting primordial black hole (PBH) flybys in the Solar System. Inspired by the methodology in the paper “[Close Encounters of the Primordial Kind](https://arxiv.org/abs/2312.17217v3),” this repository implements:
+*If dark matter is made of primordial black holes, could we catch one crossing the Solar System?*
 
-- **N-body simulations** (e.g., with [REBOUND](https://github.com/hannorein/rebound))
-- **Analytic impulse approximations** for PBH encounters
-- **Ensemble detection rate estimation** using sampled PBH parameters
-- **Parameter recovery** and significance testing to distinguish genuine PBH flybys from null hypotheses
-- **Optional** spectral analysis of orbital perturbations
+![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
+![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)
+![Built with REBOUND](https://img.shields.io/badge/N--body-REBOUND-orange.svg)
 
-## Table of Contents
-
-- [Background](#background)
-- [Features](#features)
-- [Getting Started](#getting-started)
-- [Usage](#usage)
-- [Project Structure](#project-structure)
-- [Contributing](#contributing)
-- [License](#license)
+A simulation and analysis framework for **detecting asteroid-mass primordial black hole (PBH) flybys** through the tiny perturbations they leave in Solar System orbits. It implements and builds on the method of **Tran, Geller, Lehmann & Kaiser, *Phys. Rev. D* 110, 063533 (2024)** ([arXiv:2312.17217](https://arxiv.org/abs/2312.17217)).
 
 ---
 
-## Background
+## Why this is interesting
 
-Asteroid-mass primordial black holes (PBHs) remain a viable dark matter candidate. If they account for a significant fraction of dark matter, their abundance implies at least one PBH might cross the inner Solar System per decade, leaving small but **potentially detectable perturbations** in planetary ephemerides.
+Asteroid-mass PBHs (roughly 10^17 to 10^23 g) are one of the last surviving dark-matter candidates. If they make up much of the dark matter, about one should cross the inner Solar System per decade. And because we track planetary distances to extraordinary precision (Earth-to-Mars to about 0.1 m, via Mars orbiters and landers), such a passage could leave a **measurable fingerprint** in the planets' motion.
 
-**PrimordialEncounters** provides code to **simulate** these flybys, **quantify** the orbital perturbations, and **evaluate** the detection rates and statistical significance of PBH-like signals in a realistic Solar System model.
+This project simulates those flybys, measures the resulting orbital residuals, and asks how detectable they really are.
 
-Key reference:
-- *Close Encounters of the Primordial Kind: a new observable for primordial black holes as dark matter*
-  [Tran *et al.*, arXiv:2312.17217v3]
+### How it works
 
----
+1. **Sample** a PBH encounter (mass, impact parameter, velocity, time) from physically motivated distributions.
+2. **Simulate** the flyby with an N-body integrator ([REBOUND](https://github.com/hannorein/rebound)) plus a fast analytic impulse approximation, against an unperturbed baseline Solar System.
+3. **Measure** the per-planet position residuals and reduce them to a single detection statistic.
+4. **Repeat** over Monte Carlo ensembles to estimate detection *rates* as a function of PBH mass.
 
-## Features
+### The detection statistic
 
-1. **Modular N-Body Simulation**
-   - Leverages high-precision integrators (e.g., WHFast / IAS15)
-   - Imports or approximates ephemerides for the Sun, planets, and selected minor bodies
+The figure of merit (Tran et al., Eq. 17), in `src/residual_analysis.py`:
 
-2. **Impulse Approximation**
-   - Quick analytic estimates for PBH-induced velocity “kicks”
-   - Useful for preliminary feasibility studies
+```
+q_fom = max_t  sqrt( sum_i ( delta_r_i(t) / sigma_i )^2 )
+```
 
-3. **Residual Computation**
-   - Compare baseline vs. PBH-perturbed orbits for Mercury, Venus, Earth, Mars, etc.
-   - Compute distance residuals and time-series signatures
+It is the peak over time of the quadrature-combined signal-to-noise across the inner planets (Mercury, Venus, Mars), each taken as an Earth-to-planet distance residual measured against that planet's ranging precision (`sigma_i` of about 0.1 m).
 
-4. **Ensemble Detection Rate**
-   - Sample PBH approach parameters (impact parameter, direction, velocity)
-   - Evaluate figure-of-merit \(q_{\mathrm{fom}}\) for detection
-   - Fit distribution to power laws for PBH detectability
+### The open question (and why this project is worth doing)
 
-5. **Parameter Recovery & Statistical Testing**
-   - Recover PBH mass and trajectory from synthetic “observed” orbital perturbations
-   - Perform likelihood ratio tests vs. a “no PBH” null hypothesis
+A favorable single close encounter, a heavy PBH (around 10^21 to 10^22 g) passing within roughly 1 to 2 AU, produces a raw residual of about 1 to 2 m, comfortably above the 0.1 m ranging floor. But that is the *raw* perturbed-minus-baseline signal. A real ephemeris analysis **fits** the planets' initial conditions and masses to the data, and that fit quietly absorbs much of a slow impulse, so the genuinely **detectable** signal is smaller by an amount nobody has yet quantified. Tran et al. compute the raw signal as a deliberate "proof of principle"; the independent study of [Thoss & Burkert (2025)](https://arxiv.org/abs/2409.04518) finds the *typical* (diffuse-halo) signal sits below current precision.
 
-6. **Spectral Analysis** (Optional)
-   - Fourier methods to confirm the near-monochromatic nature of orbital deviations
-   - Potential for advanced matched-filter approaches
+> **The central open problem: how much of the close-encounter signal survives a realistic ephemeris fit?** Neither the original paper nor any other public code answers this, which is exactly the gap this project is built to close.
 
 ---
 
-## Getting Started
+## What's here
 
-### Prerequisites
+| Component | Role | |
+|---|---|:--:|
+| `parameter_sampler.py` | Monte Carlo PBH encounter parameters | done |
+| `n_body_simulation.py` | REBOUND N-body engine (`NBodySimulation`) | done |
+| `analytic_impulse.py` | Impulse approximation, dv = 2GM/(b*v) | done |
+| `residual_analysis.py` | Residuals, stats, **`q_fom`** (Eq. 17) | done |
+| `ensemble_runner.py` | Parallel Monte Carlo ensembles, detection rates | hardening |
+| `synthetic_data.py` | Synthetic noisy observations | done |
+| `visualization.py` | Trajectory, residual, and detection-rate plots | done |
+| Parameter recovery | Infer PBH mass and trajectory; likelihood-ratio test vs. null | planned |
+| Spectral analysis | Confirm the near-monochromatic residual signature | planned |
 
-- Python 3.8+ (or your preferred language environment)
-- [REBOUND](https://github.com/hannorein/rebound) or an equivalent N-body library
-- [NumPy](https://numpy.org/), [SciPy](https://www.scipy.org/), [Matplotlib](https://matplotlib.org/) (for analysis and plotting)
-
-_Optional_:
-- [Jupyter Notebooks](https://jupyter.org/) for interactive exploration
-- MCMC or Global Optimization libraries (e.g., `emcee`, `dynesty`) if you plan to do advanced parameter recovery
-
-### Installation
-
-1. **Clone** this repository:
-   ```bash
-   git clone https://github.com/YourUserName/PrimordialEncounters.git
-   cd PrimordialEncounters
-   ```
-2. **Install dependencies** (example using pip):
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. Make sure you have a suitable **N-body integrator** installed or accessible (e.g., `pip install rebound`).
-
----
-
-## Usage
-
-1. **Configure** your solar system model:
-   - By default, scripts in `examples/` might load approximate ephemeris data.
-   - Or retrieve high-precision positions/velocities from [JPL Horizons](https://ssd.jpl.nasa.gov/horizons/app.html).
-
-2. **Run a Single Flyby Simulation** (example call):
-   ```bash
-   python scripts/single_flyby.py --mass 1e-9 --r0 450 --alpha 0.004 --beta 3.1415
-   ```
-   - Outputs residual data, optional plots.
-
-3. **Ensemble Analysis**:
-   ```bash
-   python scripts/ensemble_flyby.py --n 100000 --mass-base 1e-6
-   ```
-   - Samples many PBH parameters, computes detection rates, etc.
-
-4. **Parameter Recovery**:
-   ```bash
-   python scripts/param_recovery.py --input residual_data.npz
-   ```
-   - Fits a model to “observed” residuals, returning best-fit PBH mass and significance.
-
-For more examples and a guided walkthrough, see the [examples/](./examples) directory.
-
----
-
-## Project Structure
-
-```plaintext
+```
 PrimordialEncounters/
-│
-├── README.md               # This file
-├── requirements.txt        # Dependencies
-├── .gitignore              # Git ignore file
-├── src/                    # Core library code
-│   ├── nbody.py            # N-body integration wrappers
-│   ├── pbhsampler.py       # PBH parameter sampling
-│   ├── residuals.py        # Residual computations, q_fom, etc.
-│   ├── parameter_recovery.py
-│   └── ...
-├── scripts/                # Command-line scripts
-│   ├── single_flyby.py
-│   ├── ensemble_flyby.py
-│   └── param_recovery.py
-├── examples/               # Example notebooks or demonstration configs
-│   ├── SingleFlyby.ipynb
-│   └── ...
-├── tests/                  # Unit and integration tests
-│   └── ...
-└── data/                   # Optional folder for ephemeris data
+├── src/
+│   ├── parameter_sampler.py     # PBH encounter sampling
+│   ├── n_body_simulation.py     # REBOUND wrapper / integration engine
+│   ├── analytic_impulse.py      # analytic velocity-kick approximation
+│   ├── simulation_runner.py     # paired baseline + perturbed runs
+│   ├── residual_analysis.py     # residuals, stats, q_fom
+│   ├── ensemble_runner.py       # Monte Carlo ensembles, detection rates
+│   ├── synthetic_data.py        # synthetic observations
+│   └── visualization.py         # plotting
+├── tests/                       # pytest suite (q_fom fully covered)
+├── docs/                        # design notes and pseudocode
+└── requirements.txt
 ```
 
 ---
 
-## Contributing
+## Getting started
 
-Contributions are welcome!
-1. **Fork** the repo and create a new branch for your feature/fix.
-2. **Open a Pull Request** with a clear description of changes.
-3. We may request additional tests or documentation before merging.
+```bash
+git clone https://github.com/ImmortalDemonGod/PrimordialEncounters.git
+cd PrimordialEncounters
+pip install -r requirements.txt        # rebound, numpy, scipy, matplotlib
+```
 
-For major changes, please open an issue first to discuss the proposed idea.
+Each module has a runnable demo, and the test suite covers the detection statistic:
+
+```bash
+python src/parameter_sampler.py        # sample and print PBH encounter parameters
+python src/residual_analysis.py        # residual statistics on example data
+python -m pytest tests/                # run the tests
+```
+
+> Heads-up: this is **early-stage research code**. The detection statistic and core modules are solid and tested; the full single-flyby and ensemble pipelines are still being hardened (see the roadmap) and are not yet meant for production runs.
 
 ---
+
+## Roadmap
+
+**Near term, to make a single flyby correct end-to-end:**
+- Geometric PBH placement from the encounter parameters (impact parameter and approach direction).
+- Physical-units and interface calibration between the sampler and the simulation runner.
+- Validate the impulse approximation against the full N-body force.
+
+**Then, to close the science loop:**
+- Parameter recovery: MCMC mass and trajectory inference (`emcee` / `dynesty`) plus a likelihood-ratio test against a no-PBH null.
+- Spectral analysis of the residual time series.
+- **The realistic detectability layer:** quantify how much signal survives a full ephemeris orbit-fit. This is the open frontier described above, and the highest-value piece of work in the project.
+
+A useful external benchmark for validation is the independent N-body study of [Thoss & Burkert (2025)](https://arxiv.org/abs/2409.04518).
+
+---
+
+## Get involved
+
+This is an active project and contributions are very welcome, especially from people with an astrophysics, orbital-dynamics, or Bayesian-inference background. Good places to jump in:
+
+- **Dynamics and numerics:** the near-term simulation-correctness items (PBH placement geometry, integrator choice for close encounters, impulse validation).
+- **Statistics and inference:** the parameter-recovery and detection-significance pipeline.
+- **The headline problem:** reproduce the Tran and Thoss & Burkert Earth-to-Mars result and model what survives a realistic ephemeris fit. No public code does this yet, so it is a genuine, citable contribution.
+
+Open an issue to discuss anything substantial; small fixes and added tests can go straight to a pull request.
+
+---
+
+## References
+
+- **Tran, Geller, Lehmann & Kaiser (2024).** *Close encounters of the primordial kind: a new observable for primordial black holes as dark matter.* Phys. Rev. D 110, 063533. [arXiv:2312.17217](https://arxiv.org/abs/2312.17217). The method implemented here.
+- **Thoss & Burkert (2025).** *Primordial Black Holes in the Solar System.* ApJ 980, 238. [arXiv:2409.04518](https://arxiv.org/abs/2409.04518). Independent simulations; a natural validation benchmark.
+- **Rein & Liu (2012).** *REBOUND: an open-source multi-purpose N-body code.* [arXiv:1110.4876](https://arxiv.org/abs/1110.4876). For close encounters the IAS15 or MERCURIUS integrators are most appropriate.
+- **Carr et al. (2021).** *Constraints on Primordial Black Holes.* [arXiv:2002.12778](https://arxiv.org/abs/2002.12778). The viable asteroid-mass window.
 
 ## License
 
-This project is offered under the [MIT License](LICENSE). For the original paper’s text and figures, refer to its arXiv license terms.
-
----
-
-*Enjoy simulating your own cosmic close encounters!*
+Released under the [MIT License](LICENSE).
