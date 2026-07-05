@@ -11,3 +11,7 @@ evidence:
   exclude_classes: [G]
 branch:
   base: origin/master
+memory:
+  dir: none    # fix-pipeline target repos carry NO aiv lesson store — bind it OFF so the launch-brief skill
+  index: none  # skips its 'load MEMORY.md lesson store' step. Omitting this key defaulted it to auto/MEMORY.md,
+               # and a weak model then burns turns hunting a nonexistent file (observed: F017 launch-brief t5/t13-15).
