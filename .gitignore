@@ -204,3 +204,5 @@ scripts/
 .aiv/plans/
 # AIV scaffolding (corpus-captured) + provisioned venv — kept off the PR (#1/#40; .venv dangles on CI)
 .venv/
+# AIV scaffolding (corpus-captured) + provisioned venv — kept off the PR (#1/#40; .venv dangles on CI)
+.aiv-workflow.yml
