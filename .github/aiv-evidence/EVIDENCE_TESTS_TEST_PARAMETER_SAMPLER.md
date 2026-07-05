@@ -1,8 +1,9 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/test_parameter_sampler.py`
-**Commit:** `1ef895e`
-**Generated:** 2026-07-05T08:04:59Z
+**Commit:** `62956b5`
+**Previous:** `62956b5`
+**Generated:** 2026-07-05T08:05:40Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
 ---
@@ -17,12 +18,12 @@ classification:
   blast_radius: "tests/test_parameter_sampler.py"
   classification_rationale: "critical - wrong constant invalidates all downstream N-body simulations"
   classified_by: "Miguel Ingram"
-  classified_at: "2026-07-05T08:04:59Z"
+  classified_at: "2026-07-05T08:05:40Z"
 ```
 
 ## Claim(s)
 
-1. Tests verify KM_S_TO_AU_DAY constant is correct (should be 86400/1.496e8 ≈ 5.78e-4, not 86400/1.731e6 ≈ 0.05)
+1. Fixed typo in variable name that caused NameError
 2. No existing tests were modified or deleted during this change.
 
 ---
@@ -36,32 +37,29 @@ classification:
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`1ef895e`](https://github.com/ImmortalDemonGod/PrimordialEncounters/tree/1ef895e58d4b2f1950d89db4109f801ca88600ce))
+**Scope Inventory** (SHA: [`62956b5`](https://github.com/ImmortalDemonGod/PrimordialEncounters/tree/62956b5a7187d78213dd08361f1e8ed16d2e2248))
 
-- [`tests/test_parameter_sampler.py#L1-L107`](https://github.com/ImmortalDemonGod/PrimordialEncounters/blob/1ef895e58d4b2f1950d89db4109f801ca88600ce/tests/test_parameter_sampler.py#L1-L107)
+- [`tests/test_parameter_sampler.py#L46`](https://github.com/ImmortalDemonGod/PrimordialEncounters/blob/62956b5a7187d78213dd08361f1e8ed16d2e2248/tests/test_parameter_sampler.py#L46)
+- [`tests/test_parameter_sampler.py#L49-L50`](https://github.com/ImmortalDemonGod/PrimordialEncounters/blob/62956b5a7187d78213dd08361f1e8ed16d2e2248/tests/test_parameter_sampler.py#L49-L50)
 
 ### Class A (Execution Evidence)
 
 **Per-symbol test coverage (AST analysis):**
 
-- **`test_km_s_to_au_day_equals_documented_value`** (L1-L107): FAIL -- WARNING: No tests import or call `test_km_s_to_au_day_equals_documented_value`
-- **`test_sample_velocity_magnitude_matches_physical_expectation`** (unknown): FAIL -- WARNING: No tests import or call `test_sample_velocity_magnitude_matches_physical_expectation`
-- **`test_km_s_to_au_day_matches_formula_from_comment`** (unknown): FAIL -- WARNING: No tests import or call `test_km_s_to_au_day_matches_formula_from_comment`
-- **`test_sample_velocity_rejects_nonpositive_sigma`** (unknown): FAIL -- WARNING: No tests import or call `test_sample_velocity_rejects_nonpositive_sigma`
-- **`test_km_s_to_au_day_round_trip`** (unknown): FAIL -- WARNING: No tests import or call `test_km_s_to_au_day_round_trip`
+- **`test_sample_velocity_magnitude_matches_physical_expectation`** (L46): FAIL -- WARNING: No tests import or call `test_sample_velocity_magnitude_matches_physical_expectation`
 
-**Coverage summary:** 0/5 symbols verified by tests.
+**Coverage summary:** 0/1 symbols verified by tests.
 
 ### Code Quality (Linting & Types)
 
-- **ruff:** 36 error(s)
+- **ruff:** 25 error(s)
 - **mypy:** Found 2 errors in 1 file (checked 1 source file)
 
 ## Claim Verification Matrix
 
 | # | Claim | Type | Evidence | Verdict |
 |---|-------|------|----------|---------|
-| 1 | Tests verify KM_S_TO_AU_DAY constant is correct (should be 8... | unresolved | No automatic binding available | REVIEW MANUAL REVIEW |
+| 1 | Fixed typo in variable name that caused NameError | unresolved | No automatic binding available | REVIEW MANUAL REVIEW |
 | 2 | No existing tests were modified or deleted during this chang... | structural | Class C not collected | REVIEW MANUAL REVIEW |
 
 **Verdict summary:** 0 verified, 0 unverified, 2 manual review.
@@ -70,11 +68,11 @@ classification:
 ## Verification Methodology
 
 **Zero-Touch Mandate:** Verifier inspects artifacts only.
-Evidence collected by `aiv commit` running: git diff (scope inventory), AST symbol-to-test binding (0/5 symbols verified).
+Evidence collected by `aiv commit` running: git diff (scope inventory), AST symbol-to-test binding (0/1 symbols verified).
 Ruff/mypy results are in Code Quality (not Class A) because they prove syntax/types, not behavior.
 
 ---
 
 ## Summary
 
-Unit tests for parameter_sampler F017 velocity conversion bug
+Fix test variable name typo

@@ -43,12 +43,11 @@ def test_sample_velocity_magnitude_matches_physical_expectation():
     
     # Convert sigma_v to AU/day using CORRECT conversion for expected scale
     correct_km_s_to_au_day = 86400.0 / 1.496e8
-    expected_mean_speed_au_day = 2 * sigma_v * np.sqrt(2 / np.pi) * correct_ * correct_km_s_to_au_day
+    expected_mean_speed_au_day = 2 * sigma_v * np.sqrt(2 / np.pi) * correct_km_s_to_au_day
     
     # Check that the mean speed is in the expected physical range (~0.1-0.25 AU/day)
-    mean_speed = np.mean(speeds_au_day)
-    assert 0.1 <= mean_speed <= 0.25, (
-        f"Mean speed magnitude = {mean_speed:.3f} AU/day "
+    assert 0.1 <= np.mean(speeds_au_day) <= 0.25, (
+        f"Mean speed magnitude = {np.mean(speeds_au_day):.3f} AU/day "
         f"(expected ~0.1-0.25 AU/day for sigma_v={sigma_v} km/s). "
         f"If you see ~10-25 AU/day, the conversion constant is wrong by ~86x."
     )
