@@ -71,7 +71,7 @@ Change 'primordial-f017-walk-tests': 1 commit(s) across 1 file(s).
 
 ### Class A (Behavioral/Direct)
 
-**Test Execution Evidence (captured at HEAD `c070001`):**
+**Test Execution Evidence (GREEN run captured post-fix at walk head `0658963`; at this packet's head `c070001` the production constant is still buggy and these tests FAIL by design, see the RED-on-baseline demonstration below and prove-it's baseline_tests.txt):**
 
 ```text
 $ .venv/bin/python -m pytest tests/test_parameter_sampler.py -v
