@@ -19,7 +19,7 @@ classification:
   sod_mode: S0
   critical_surfaces: []
   blast_radius: component
-  classification_rationale: "critical - single constant fix affects all downstream velocity sampling and ensemble runs"
+  classification_rationale: "R1: The KM_S_TO_AU_DAY constant error (factor ~86) is a single-file bug fix in a physics unit conversion constant. Per spec tier calibration, R3 is reserved for critical surfaces (auth/payment/credentials/encryption/PII) or cross-system blast radius. This change touches no such surface — it corrects a constant in src/parameter_sampler.py:11 with blast radius limited to the velocity sampling component. The tests packet (primordial-f017-walk-tests) is classified R1 for the same reason."
   classified_by: "nvidia/nemotron-3-ultra-550b-a55b"
   classified_at: "2026-07-05T10:34:28Z"
 ```
@@ -27,7 +27,7 @@ classification:
 ## Claims
 
 1. KM_S_TO_AU_DAY constant changed from 1.0/1.731e6*86400.0 (~0.0499) to 86400.0/1.496e8 (~5.78e-4), fixing the ~86x velocity overestimation bug
-2. No existing tests were modified or deleted during this change.
+2. No existing tests were modified or deleted **in this change's range** (55658c3..2a2035a). Test modifications (two tests deleted, one signature changed) occurred in a separate change 'primordial-f017-walk-tests' (range 6318471..c070001) — see PACKET_primordial_f017_walk_tests.md Class F.
 3. The fix produces physically plausible velocity magnitudes ~0.1-0.25 AU/day for sigma_v=200 km/s (verified via live-fire execution)
 4. The full test suite passes with no regressions (15 passed, 1 skipped)
 
@@ -172,7 +172,7 @@ The fix is minimal, surgical, and directly addresses the root cause identified i
 
 ### Class F (Provenance / Chain of Custody)
 
-**Test file chain of custody (preserved, not modified):**
+**Test file chain of custody (preserved, not modified in this change's range):**
 - `tests/test_parameter_sampler.py` — Contains 3 tests verifying the constant and velocity behavior:
   - `test_km_s_to_au_day_equals_documented_value` — asserts constant matches expected value
   - `test_sample_velocity_magnitude_matches_physical_expectation` — asserts velocity magnitudes are physically plausible
@@ -180,15 +180,17 @@ The fix is minimal, surgical, and directly addresses the root cause identified i
 - All three tests existed at base SHA `55658c3` and remain unchanged at head SHA `2a2035a`
 - Test execution at head SHA: all 3 parameter_sampler tests PASS (see Class A evidence)
 
-**Git history of touched test files:**
+**Git history of touched test files in this change's range (55658c3..2a2035a):**
 ```bash
-$ git log --oneline tests/test_parameter_sampler.py
+$ git log --oneline 55658c3..2a2035a -- tests/test_parameter_sampler.py
 # No commits modifying this file in the change range (base to head)
 ```
 
+**Provenance conflict clarification (AIV-PROVENANCE-CONFLICT):** The separate change 'primordial-f017-walk-tests' (packet: PACKET_primordial_f017_walk_tests.md) has range `6318471..c070001` and its Class F documents that two tests were deleted (`test_km_s_to_au_day_matches_formula_from_comment`, `test_sample_velocity_rejects_nonpositive_sigma`) and one test signature changed (`test_sample_velocity_magnitude_matches_physical_expectation` gained an `rng` fixture) in that range. These are **different change ranges** — the impl packet's range (55658c3..2a2035a) modifies only `src/parameter_sampler.py`; the tests packet's range (6318471..c070001) modifies only `tests/test_parameter_sampler.py`. A reader seeing both packets should understand they describe two sequential, independent changes in the walk, not a contradiction.
+
 **Fix provenance for E010 (bug-fix word in claim):** This packet contains a bug-fix claim (Claim 1 uses "fixing the ~86x velocity overestimation bug"). Per E010, this requires Class F provenance evidence. The above chain of custody demonstrates:
-1. The tests that verify the bug fix existed before the change
-2. The tests were not modified by this change
+1. The tests that verify the bug fix existed before the change (at base SHA `55658c3`)
+2. The tests were not modified by this change (range 55658c3..2a2035a)
 3. The tests pass after the change, proving the fix corrects the behavior without test tampering
 
 ---
