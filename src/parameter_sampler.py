@@ -8,7 +8,7 @@ DEFAULT_VELOCITY_DISPERSION_KM_S = 200.0 # Example: Velocity dispersion in km/s 
 DEFAULT_TIME_RANGE_YEARS = (0.0, 100.0) # Example: Time range for encounter
 
 # Conversion factors
-KM_S_TO_AU_DAY = 1.0 / 1.731e6 * 86400.0 # Approx: 1 AU = 1.496e8 km, 1 day = 86400 s
+KM_S_TO_AU_DAY = 86400.0 / 1.496e8  # 1 AU = 1.496e8 km, 1 day = 86400 s
 
 def sample_pbh_mass(n_samples=1, log_min=np.log10(DEFAULT_MASS_RANGE_MSUN[0]), log_max=np.log10(DEFAULT_MASS_RANGE_MSUN[1])):
     """
