@@ -124,8 +124,8 @@ The buggy constant (0.0499 ≈ 1/1.731e6 × 86400) produces velocities ~15.9 AU/
 | Floating-point precision edge cases | Constant ~5.78e-4; double precision has ~15 digits; no catastrophic cancellation |
 
 **Searches performed with no findings:**
-- No pre-existing test file for `parameter_sampler.py` existed at baseline `6318471` (confirmed by `git ls-tree -r 6318471 --name-only | grep -E 'test.*parameter'` → empty)
-- No test modifications or deletions in this change (confirmed by `git diff 6318471..c070001 -- tests/` → only `test_parameter_sampler.py` added)
+- A pre-existing test file `tests/test_parameter_sampler.py` **did exist** at baseline `6318471` (confirmed by `git show 6318471:tests/test_parameter_sampler.py`) with 5 test functions
+- Test modifications and deletions **did occur** in this change (confirmed by `git diff 6318471..c070001 -- tests/` → 48 insertions, 58 deletions in `test_parameter_sampler.py`)
 - No other unit conversion constants in `parameter_sampler.py` (only `KM_S_TO_AU_DAY`)
 - No external dependencies (filesystem, network, DB, time) in the module — pure computation
 
@@ -154,24 +154,119 @@ Success: no issues found in 1 source file
 
 ```diff
 $ git diff 6318471..c070001 --stat
- tests/test_parameter_sampler.py | 77 ++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 77 insertions(+)
+ tests/test_parameter_sampler.py | 106 ++++++++++++++++++++++++++++------
+ 1 file changed, 48 insertions(+), 58 deletions(-)
 ```
 
 ```diff
 $ git diff 6318471..c070001 -- tests/
 diff --git a/tests/test_parameter_sampler.py b/tests/test_parameter_sampler.py
-new file mode 100644
-index 0000000..a1b2c3d
---- /dev/null
+index a0203e1..a1e8827 100644
+--- a/tests/test_parameter_sampler.py
 +++ b/tests/test_parameter_sampler.py
-@@ -0,0 +1,77 @@
-+"""
-+Tests for F017: KM_S_TO_AU_DAY conversion constant is wrong by a factor of ~86.
+@@ -15,8 +15,14 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+ import src.parameter_sampler as ps
+ 
+ 
++@pytest.fixture
++def rng():
++    """Fixed-seed RNG for deterministic sampling tests."""
++    return np.random.default_rng(42)
 +
-+Each test names the bug from parameter_sampler.bug-catalog.md it would catch.
-+"""
-+...
++
+ def test_km_s_to_au_day_equals_documented_value():
+-    """parameter_sampler: KM_S_TO_AU_DAY equals 86400/1.496e8 ≈ 5.78e-4 — guards against wrong conversion constant (F017)"""
++    """parameter_sampler: KM_S_TO_AU_DAY should equal 86400/1.496e8 ≈ 5.78e-4"""
+     # The comment states: "Approx: 1 AU = 1.496e8 km, 1 day = 86400 s"
+     # Therefore: 1 km/s = (1 AU / 1.496e8 km) * (86400 s / 1 day) = 86400 / 1.496e8 AU/day
+     expected = 86400.0 / 1.496e8
+@@ -26,25 +32,23 @@ def test_km_s_to_au_day_equals_documented_value():
+     )
+ 
+ 
+-def test_sample_velocity_magnitude_matches_physical_expectation():
+-    """parameter_sampler: sample_velocity with sigma_v=200 km/s yields speed magnitudes ~0.1-0.25 AU/day — guards against 86x velocity inflation (F017)"""
++def test_sample_velocity_magnitude_matches_physical_expectation(rng):
++    """parameter_sampler: sample_velocity with sigma_v=200 km/s should yield speed magnitudes ~0.1-0.25 AU/day"""
+     # With sigma_v=200 km/s, each component ~N(0,200)
+     # For Maxwell-Boltzmann, mean speed = 2*sigma*sqrt(2/pi) ≈ 2*200*0.7979 ≈ 319 km/s
+     # Correct conversion: 319 * (86400/1.496e8) ≈ 319 * 5.78e-4 ≈ 0.184 AU/day
+     # Buggy conversion: 319 * (86400/1.731e6) ≈ 319 * 0.0499 ≈ 15.9 AU/day
+-    
+-    # Use fixed seed for determinism
+-    rng = np.random.default_rng(42)
++
+     n_samples = 10000
+     sigma_v = 200.0  # km/s
+-    
++
+     velocities = ps.sample_velocity(n_samples=n_samples, sigma_v_km_s=sigma_v)
+     speeds_au_day = np.linalg.norm(velocities, axis=1)  # AU/day
+-    
++
+     # Convert sigma_v to AU/day using CORRECT conversion for expected scale
+     correct_km_s_to_au_day = 86400.0 / 1.496e8
+     expected_mean_speed_au_day = 2 * sigma_v * np.sqrt(2 / np.pi) * correct_km_s_to_au_day
+-    
++
+     # Check that the mean speed is in the expected physical range (~0.1-0.25 AU/day)
+     assert 0.1 <= np.mean(speeds_au_day) <= 0.25, (
+         f"Mean speed magnitude = {np.mean(speeds_au_day):.3f} AU/day "
+@@ -53,29 +57,8 @@ def test_sample_velocity_magnitude_matches_physical_expectation():
+     )
+ 
+ 
+-def test_km_s_to_au_day_matches_formula_from_comment():
+-    """parameter_sampler: KM_S_TO_AU_DAY matches the documented formula 86400/1.496e8 — guards against constant/comment drift"""
+-    # Recompute from documented constants in comment
+-    km_per_au = 1.496e8  # from comment
+-    seconds_per_day = 86400  # from comment
+-    expected = seconds_per_day / km_per_au
+-    assert ps.KM_S_TO_AU_DAY == pytest.approx(expected, rel=1e-10)
+-
+-
+-def test_sample_velocity_rejects_nonpositive_sigma():
+-    """parameter_sampler: sample_velocity raises ValueError for sigma_v_km_s <= 0 — guards against degenerate sampling"""
+-    # Test sigma_v = 0
+-    with pytest.raises(ValueError):
+-        ps.sample_velocity(n_samples=1, sigma_v_km_s=0.0)
+-    
+-    # Test sigma_v < 0
+-    with pytest.raises(ValueError):
+-        ps.sample_velocity(n_samples=1, sigma_v_km_s=-1.0)
+-
+-
+-# Additional test to verify the round-trip property: km/s -> AU/day -> km/s should be identity
+ def test_km_s_to_au_day_round_trip():
+-    """parameter_sampler: KM_S_TO_AU_DAY * AU_PER_KM == 1 — guards against broken unit conversion"""
++    """parameter_sampler: KM_S_TO_AU_DAY should be the exact inverse of AU/day → km/s conversion"""
+     # 1 km/s * KM_S_TO_AU_DAY = X AU/day
+     # X AU/day * (1 day / 86400 s) * (1.496e8 km / 1 AU) should = 1 km/s
+     au_per_km = 1.496e8
+@@ -90,17 +73,12 @@ if __name__ == "__main__":
+     # Simple test runner for manual verification
+     test_km_s_to_au_day_equals_documented_value()
+     print("✓ test_km_s_to_au_day_equals_documented_value")
+-    
+-    test_sample_velocity_magnitude_matches_physical_expectation()
++
++    rng = np.random.default_rng(42)
++    test_sample_velocity_magnitude_matches_physical_expectation(rng)
+     print("✓ test_sample_velocity_magnitude_matches_physical_expectation")
+-    
+-    test_km_s_to_au_day_matches_formula_from_comment()
+-    print("✓ test_km_s_to_au_day_matches_formula_from_comment")
+-    
+-    test_sample_velocity_rejects_nonpositive_sigma()
+-    print("✓ test_sample_velocity_rejects_nonpositive_sigma")
+-    
++
+     test_km_s_to_au_day_round_trip()
+     print("✓ test_km_s_to_au_day_round_trip")
+-    
++
+     print("\nAll tests passed!")
+\ No newline at end of file
 ```
 
-**Claim 3 verification:** Only `tests/test_parameter_sampler.py` was added; no pre-existing test file was modified or deleted. The test suite is preserved (there was no pre-existing test suite for this module).
+**Claim 3 verification:** The test file `tests/test_parameter_sampler.py` was modified (not added) — two pre-existing tests were deleted (`test_km_s_to_au_day_matches_formula_from_comment`, `test_sample_velocity_rejects_nonpositive_sigma`) and one test signature was changed (`test_sample_velocity_magnitude_matches_physical_expectation` now takes an `rng` fixture). The file existed at baseline `6318471` with 5 test functions; at HEAD `c070001` it has 3 test functions plus 1 fixture.
