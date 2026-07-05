@@ -1,0 +1,49 @@
+PBH Parameter Sampler Module - Example Usage
+
+Generating 5 PBH parameter samples with default settings...
+
+Sample 1:
+  Mass: 4.882e-07 M_sun
+  Impact Parameter: 836.243 AU
+  Velocity: [ 0.175  0.066  0.067] AU/day
+  Encounter Time: 13.670 years
+
+Sample 2:
+  Mass: 1.123e-07 M_sun
+  Impact Parameter: 837.472 AU
+  Velocity: [ 0.027  0.012  0.026] AU/day
+  Encounter Time: 95.203 years
+
+Sample 3:
+  Mass: 1.947e-11 M_sun
+  Impact Parameter: 954.077 AU
+  Velocity: [-0.099  0.237 -0.157] AU/day
+  Encounter Time: 54.971 years
+
+Sample 4:
+  Mass: 5.139e-07 M_sun
+  Impact Parameter: 835.898 AU
+  Velocity: [-0.178 -0.200  0.060] AU/day
+  Encounter Time: 18.591 years
+
+Sample 5:
+  Mass: 3.413e-08 M_sun
+  Impact Parameter: 806.738 AU
+  Velocity: [ 0.109  0.132  0.204] AU/day
+  Encounter Time: 14.658 years
+
+Generating 2 samples with custom settings...
+
+Custom Sample 1:
+  Mass: 6.798e-10 M_sun
+  Impact Parameter: 439.641 AU
+  Velocity: [ 0.097 -0.012  0.111] AU/day
+  Encounter Time: 28.120 years
+
+Custom Sample 2:
+  Mass: 6.108e-09 M_sun
+  Impact Parameter: 485.177 AU
+  Velocity: [-0.003  0.011 -0.069] AU/day
+  Encounter Time: 44.784 years
+
+Parameter Sampler Module - Example Finished.

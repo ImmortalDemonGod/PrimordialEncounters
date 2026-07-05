@@ -1,0 +1,13 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0 -- /Library/Developer/CommandLineTools/usr/bin/python3
+cachedir: .pytest_cache
+rootdir: /private/tmp/claude-501/-Users-tomriddle1--openclaw-workspace/b0b1875c-425b-4b6d-8556-111ee59684cd/scratchpad/PrimordialEncounters-primordial-f017-walk
+configfile: pytest.ini
+plugins: cov-7.1.0, memray-1.7.0, anyio-3.7.1, timeout-2.3.1, xdist-3.6.1
+collecting ... collected 3 items
+
+tests/test_parameter_sampler.py::test_km_s_to_au_day_equals_documented_value PASSED [ 33%]
+tests/test_parameter_sampler.py::test_sample_velocity_magnitude_matches_physical_expectation PASSED [ 66%]
+tests/test_parameter_sampler.py::test_km_s_to_au_day_round_trip PASSED   [100%]
+
+============================== 3 passed in 0.61s ===============================
