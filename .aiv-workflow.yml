@@ -1,0 +1,13 @@
+# .aiv-workflow.yml — scaffolded by the fix-pipeline at intake (#65): no config was committed, so the
+# aiv-workflow skills would otherwise fall back to inline defaults SILENTLY (notably branch.base=origin/main,
+# which mishandles master-default repos). It is gitignored to stay off the finding's focused fix PR; adopt it
+# as a standalone `chore(aiv): add workflow config` commit (git add -f .aiv-workflow.yml) to make it permanent.
+aiv:
+  cli: aiv
+  packets_dir: .github/aiv-packets
+  check_cmd: aiv check
+evidence:
+  mandate_all_classes: true
+  exclude_classes: [G]
+branch:
+  base: origin/master
