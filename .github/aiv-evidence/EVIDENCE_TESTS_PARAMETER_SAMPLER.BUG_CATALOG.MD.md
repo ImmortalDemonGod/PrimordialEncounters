@@ -1,7 +1,7 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/parameter_sampler.bug-catalog.md`
-**Commit:** `85099f7`
+**Commit:** `1ef895e`
 **Generated:** 2026-07-05T08:00:42Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
@@ -36,9 +36,9 @@ classification:
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`85099f7`](https://github.com/ImmortalDemonGod/PrimordialEncounters/tree/85099f766691b97cc3e81970176fe05b69fa0b72))
+**Scope Inventory** (SHA: [`1ef895e`](https://github.com/ImmortalDemonGod/PrimordialEncounters/tree/1ef895e58d4b2f1950d89db4109f801ca88600ce))
 
-- [`tests/parameter_sampler.bug-catalog.md#L1-L104`](https://github.com/ImmortalDemonGod/PrimordialEncounters/blob/85099f766691b97cc3e81970176fe05b69fa0b72/tests/parameter_sampler.bug-catalog.md#L1-L104)
+- [`tests/parameter_sampler.bug-catalog.md#L1-L104`](https://github.com/ImmortalDemonGod/PrimordialEncounters/blob/1ef895e58d4b2f1950d89db4109f801ca88600ce/tests/parameter_sampler.bug-catalog.md#L1-L104)
 
 ### Class A (Execution Evidence)
 
