@@ -1,7 +1,7 @@
 # AIV Evidence File (v1.0)
 
 **File:** `tests/primordial-f004-walk.bug-catalog.md`
-**Commit:** `659fd42`
+**Commit:** `05d54d826fd2`
 **Generated:** 2026-07-07T16:05:08Z
 **Protocol:** AIV v2.0 + Addendum 2.7 (Zero-Touch Mandate)
 
@@ -36,9 +36,9 @@ classification:
 
 ### Class B (Referential Evidence)
 
-**Scope Inventory** (SHA: [`659fd42`](https://github.com/ImmortalDemonGod/PrimordialEncounters/tree/659fd42e56f35a9c1e7d3886f172e19bc4c051b2))
+**Scope Inventory** (SHA: [`05d54d826fd2`](https://github.com/ImmortalDemonGod/PrimordialEncounters/tree/05d54d826fd2e56f35a9c1e7d3886f172e19bc4c051b2))
 
-- [`tests/primordial-f004-walk.bug-catalog.md#L1-L15`](https://github.com/ImmortalDemonGod/PrimordialEncounters/blob/659fd42e56f35a9c1e7d3886f172e19bc4c051b2/tests/primordial-f004-walk.bug-catalog.md#L1-L15)
+- [`tests/primordial-f004-walk.bug-catalog.md#L1-L15`](https://github.com/ImmortalDemonGod/PrimordialEncounters/blob/05d54d826fd2e56f35a9c1e7d3886f172e19bc4c051b2/tests/primordial-f004-walk.bug-catalog.md#L1-L15)
 
 ### Class A (Execution Evidence)
 
