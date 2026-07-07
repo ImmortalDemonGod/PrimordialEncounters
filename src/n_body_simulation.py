@@ -213,8 +213,9 @@ class NBodySimulation:
         pbh_pos, pbh_vel = self.get_particle_state(pbh_label)
         body_pos, body_vel = self.get_particle_state(target_body_label)
         pbh_mass = None
-        for p in self.sim.particles:
-             if getattr(p, 'label', None) == pbh_label: # type: ignore # Known dynamic attribute issue
+        for i, p in enumerate(self.sim.particles):
+             particle_label = self._particle_labels[i] if i < len(self._particle_labels) else f"particle_{i}"
+             if particle_label == pbh_label:
                  pbh_mass = p.m
                  break
 
