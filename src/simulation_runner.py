@@ -81,14 +81,14 @@ def run_single_simulation(args):
         if pbh_params:
             print(f"Running perturbed simulation (PBH params: {pbh_params})...")
             # Add the PBH particle itself
-            pbh_mass = pbh_params['mass']
+            pbh_mass = pbh_params['mass_msun']
             # PBH velocity needs conversion AU/day -> AU/(yr/2pi)
             pbh_velocity_rebound = pbh_params['velocity_au_day'] * n_body_simulation.VELOCITY_DAY_TO_REBOUND
             # PBH position needs to be calculated based on encounter params (impact param, t_encounter)
             # This requires a more complex setup - assuming position is given directly for now
             # Placeholder: Use a dummy position far away initially
             # TODO: Calculate initial PBH position based on encounter parameters relative to target
-            pbh_initial_pos = np.array([-1000.0, pbh_params.get('impact_param', 100.0), 0.0]) # Needs proper calculation!
+            pbh_initial_pos = np.array([-1000.0, pbh_params.get('impact_param_au', 100.0), 0.0]) # Needs proper calculation!
             pbh_label = "PBH_Perturber"
 
             sim_instance.add_pbh(
