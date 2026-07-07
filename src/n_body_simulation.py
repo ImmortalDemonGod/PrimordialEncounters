@@ -28,6 +28,8 @@ class NBodySimulation:
         """
         self.sim = rebound.Simulation()
         self.sim.integrator = integrator
+        # Maintain a list of labels parallel to sim.particles
+        self._particle_labels = []
 
         # Store for potential reset
         self._integrator = integrator
@@ -83,16 +85,15 @@ class NBodySimulation:
                  # If adding bodies *after* some evolution, manual addition is needed.
 
             self.sim.add_solar_system(date=date)
-            # Assign labels for easier access if not already done by rebound
-            # (rebound usually assigns names like 'Sun', 'Jupiter', etc.)
+            # Assign labels for easier access (rebound usually assigns names like 'Sun', 'Jupiter', etc.)
+            self._particle_labels = []
             for p in self.sim.particles:
-                 if not hasattr(p, 'label') or not p.label:
-                     # Attempt to get name from hash (rebound stores names as hashes)
-                     try:
-                         p.label = p.name # type: ignore # Known dynamic attribute issue
-                     except:
-                         # Fallback label
-                         p.label = f"particle_{p.index}"
+                 # Attempt to get name from REBOUND's hash/name
+                 try:
+                     name = str(p.name) if p.name else f"particle_{p.index}"
+                 except:
+                     name = f"particle_{p.index}"
+                 self._particle_labels.append(name)
             print(f"Successfully added {self.sim.N} particles (Sun and planets). Current time: {self.get_simulation_time():.4f} years.")
         except Exception as e:
             print(f"Error adding Solar System bodies: {e}")
@@ -113,17 +114,10 @@ class NBodySimulation:
             raise ValueError("Position and velocity must be 3D vectors.")
 
         print(f"Adding particle '{label}' with mass {mass:.2e} M_sun...")
-        # Ensure label is assigned correctly
+        # REBOUND's add() doesn't accept 'label' kwarg; store label in parallel list
         self.sim.add(m=mass, x=position[0], y=position[1], z=position[2],
-                     vx=velocity[0], vy=velocity[1], vz=velocity[2], label=label)
-        # Verify label assignment (REBOUND might handle labels differently based on version/context)
-        # Accessing the last added particle
-        new_particle = self.sim.particles[-1]
-        # Check and explicitly set label if needed (REBOUND sometimes needs help)
-        if getattr(new_particle, 'label', None) != label: # type: ignore # Known dynamic attribute issue
-             print(f"Warning: Label '{label}' might not be set correctly on the particle object. Manually setting.")
-             new_particle.label = label # type: ignore # Known dynamic attribute issue
-
+                     vx=velocity[0], vy=velocity[1], vz=velocity[2])
+        self._particle_labels.append(label)
         print(f"Particle '{label}' added. Total particles: {self.sim.N}")
 
     def run_simulation(self, duration):
@@ -185,9 +179,8 @@ class NBodySimulation:
              tuple: A tuple containing (position, velocity) as numpy arrays (AU, AU/(yr/2pi)),
                     or (None, None) if the particle is not found.
          """
-         for p in self.sim.particles:
-             # Check if particle has a label attribute and if it matches
-             particle_label = getattr(p, 'label', None) # type: ignore # Known dynamic attribute issue
+         for i, p in enumerate(self.sim.particles):
+             particle_label = self._particle_labels[i] if i < len(self._particle_labels) else f"particle_{i}"
              if particle_label == label:
                  pos = np.array([p.x, p.y, p.z])
                  vel = np.array([p.vx, p.vy, p.vz])
@@ -273,9 +266,12 @@ class NBodySimulation:
 
         # Find the target particle object again (its state might have changed slightly)
         target_particle = None
-        for p in self.sim.particles:
-            if getattr(p, 'label', None) == target_body_label: # type: ignore # Known dynamic attribute issue
+        target_index = -1
+        for i, p in enumerate(self.sim.particles):
+            particle_label = self._particle_labels[i] if i < len(self._particle_labels) else f"particle_{i}"
+            if particle_label == target_body_label:
                 target_particle = p
+                target_index = i
                 break
 
         if target_particle is None:
