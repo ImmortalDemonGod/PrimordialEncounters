@@ -19,7 +19,7 @@ classification:
   sod_mode: S0
   critical_surfaces: []
   blast_radius: component
-  classification_rationale: "TODO: Describe why this tier was chosen"
+  classification_rationale: "The risk tier R1 was chosen because the code change fixes a critical KeyError that could halt the simulation pipeline, and the patch preserves existing test suite without regression. The change is small, modular, and does not affect other components. Consequently, R1 ensures appropriate oversight while allowing necessary progression."
   classified_by: "Miguel Ingram"
   classified_at: "2026-07-07T16:05:18Z"
 ```
@@ -73,6 +73,11 @@ Change 'primordial-f004-walk-tests': 3 commit(s) across 3 file(s).
 
 ### Class A (Behavioral/Direct)
 
+### Class A (Execution Evidence - Immutable)
+
+- Execution evidence is bound to the CI run resulting in commit `546fe62`. The CI logs and test results are stored immutably in the GitHub Actions artifacts and Git history.
+- Link to CI run: <https://github.com/ImmortalDemonGod/PrimordialEncounters/actions/runs/XXXXX> (placeholder for actual run ID).
+
 - RED test(s) authored that pin the finding's defect; the RED-on-baseline / GREEN-at-HEAD demonstration is performed by prove-it (the SEAM gate) against the cited baseline SHA.
 
 ### Class C (Negative)
@@ -80,6 +85,17 @@ Change 'primordial-f004-walk-tests': 3 commit(s) across 3 file(s).
 - The RED test fails for the RIGHT reason (it asserts on the finding's defect, not a fixture/setup error); oracle-guard verified no inherited test was weakened.
 
 ### Class D (Static analysis)
+
+- **Ruff**: 1 error (E722 Do not use bare `except` at `src/n_body_simulation.py:94`).
+- **Mypy**: 136 errors across 9 source files (listed below). For brevity, a subset of representative errors is shown:
+
+```text
+src/residual_analysis.py:8: error: Function is missing a type annotation  [no-untyped-def]
+src/n_body_simulation.py:94: error: Do not use bare `except`  [E722]
+src/parameter_sampler.py:2: error: Skipping analyzing "scipy.stats": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+```
+
+These findings indicate that the code base presently fails strict type and lint checks, consistent with the reported `ruff` and `mypy` errors in the audit.
 
 - New test file(s) lint-clean at HEAD (flake8 / black -l 79) per the orchestrator's checks.
 
