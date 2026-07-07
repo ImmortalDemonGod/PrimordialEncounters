@@ -1,0 +1,13 @@
+# HARNESS-EXECUTED (#157) — new RED test(s) tests/test_primordial_f004_walk.py run in a throwaway worktree at origin/master
+# exit=0 (assertion failure)
+============================= test session starts ==============================
+platform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0
+rootdir: /Users/tomriddle1/.openclaw/workspace/orchestration/fix/.work/seam_base_primordial-f004-walk_96361
+configfile: pytest.ini
+plugins: cov-7.1.0
+collected 1 item
+
+tests/test_primordial_f004_walk.py .                                     [100%]
+
+============================== 1 passed in 1.01s ===============================
+
