@@ -1,7 +1,7 @@
 import rebound
 import numpy as np
 # Import the analytic impulse calculation function
-from analytic_impulse import calculate_velocity_kick, G as analytic_G # Use G from analytic_impulse for consistency check
+from .analytic_impulse import calculate_velocity_kick, G as analytic_G # Use G from analytic_impulse for consistency check
 
 # Define conversion factor for velocity: (AU/day) to (AU / (yr/2pi))
 # 1 yr = 365.25 days => 1 day = 1/365.25 yr
