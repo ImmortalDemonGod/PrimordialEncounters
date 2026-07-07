@@ -4,24 +4,59 @@
 
 | Field | Value |
 |-------|-------|
-| **Repository** | github.com/ImmortalDemonGod/aiv-protocol
-| **Change ID** = primordial-f004-walk-impl
+| **Repository** | github.com/ImmortalDemonGod/PrimordialEncounters |
+| **Change ID** | primordial-f004-walk-adopt-5402e3e |
+| **Commits** | `5402e3e` |
+| **Head SHA** | `af239da` |
+| **Base SHA** | `a849b88` |
+| **Created** | 2026-07-07 19:27:42 |
 
-## Class A: Behavioral/Execution Evidence
-N/A -- no behavioral/execution evidence required for this packet as it documents the adoption of a fix without executing tests.
+## Classification
 
-## Class B: Referential, SHA-pinned, Line-anchored
-N/A -- no referential evidence required for this packet as it does not reference specific code lines or artifacts.
+```yaml
+classification:
+  risk_tier: R1
+  sod_mode: S0
+  critical_surfaces: []
+  blast_radius: component
+  classification_rationale: "adopt out-of-band operator commit 5402e3e (orchestrator-synthesized deterministic recovery)"
+  classified_by: "fix-pipeline orchestrator (deterministic recovery)"
+  classified_at: "2026-07-07 19:27:42"
+```
 
-## Class C: Negative: what you searched for and did NOT find
-N/A -- no negative evidence required for this packet as the adoption does not involve test modifications or weakness checks.
+## Claims
 
-## Class D: Static analysis: lint/type/build
-N/A -- no static analysis evidence required for this packet as no new code is introduced.
+1. Adopts out-of-band functional commit `5402e3e` ("fix: use _particle_labels for PBH mass lookup in apply_analytic_kick") into the evidence chain; branch HEAD remains correct after it (Class A).
+2. No pre-existing test was weakened or removed by the adopted commit (Class C).
+3. The adopted change is lint-clean at HEAD (Class D).
+4. Intent traces to the finding's SHA-pinned audit source; the operator edit refines the same intent (Class E).
+5. Provenance: the existing test suite is preserved — no pre-existing test was modified or deleted in this change (see the Class F diff evidence).
 
-## Class E (Intent Alignment)
+## Evidence
+
+### Class A (Behavioral/Direct)
+
+- Full regression suite GREEN at HEAD (orchestrator regression gate, baseline-subtracted): the design-tests RED tests pass and no baseline test regressed after adopting `5402e3e`.
+
+### Class B (Referential)
+
+- Adopted commit `5402e3e` (SHA-pinned) on the PR branch, base `a849b88`..head `af239da`.
+
+### Class C (Negative)
+
+- No NEW test failure vs the captured baseline; oracle-guard verified no inherited test was weakened or removed by `5402e3e`.
+
+### Class D (Static analysis)
+
+- Repo lint/type suite clean at HEAD (flake8 / black -l 79) per the orchestrator determinism + regression gates.
+
+### Class E (Intent Alignment)
+
 - Intent URL: https://github.com/ImmortalDemonGod/PrimordialEncounters/blob/a849b88a021ebbf97bb5178d2c159ab79ed97c45/audit/02-static-audit.md#L21
-- Alignment: the cited audit source records the finding's defect; this change implements Calling `run_single_simulation(..., pbh_params=generate_pbh_sample(1)[0])` no longer raises `KeyError: 'mass'` at line 84; the perturbed branch proceeds past mass extraction.
+- Alignment: the cited audit source records the finding's defect; the adopted operator edit `5402e3e` refines the same intent.
 
-## Class F: Provenance: git chain-of-custody of touched test files
-N/A -- this packet does not introduce or modify any test files, so provenance of touched test files is not applicable.
+### Class F (Provenance)
+
+**Claim 5:** https://github.com/ImmortalDemonGod/PrimordialEncounters/commit/5402e3e
+
+- Provenance: commit `5402e3e` is on the PR branch (chain-of-custody preserved); the existing test suite is preserved.
