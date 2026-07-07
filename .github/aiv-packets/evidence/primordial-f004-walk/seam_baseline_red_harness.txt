@@ -1,13 +1,28 @@
 # HARNESS-EXECUTED (#157) — new RED test(s) tests/test_primordial_f004_walk.py run in a throwaway worktree at origin/master
-# exit=0 (assertion failure)
+# exit=2 (import-error (symbol absent at base?))
 ============================= test session starts ==============================
 platform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0
-rootdir: /Users/tomriddle1/.openclaw/workspace/orchestration/fix/.work/seam_base_primordial-f004-walk_96361
+rootdir: /Users/tomriddle1/.openclaw/workspace/orchestration/fix/.work/seam_base_primordial-f004-walk_27166
 configfile: pytest.ini
 plugins: cov-7.1.0
-collected 1 item
+collected 0 items / 1 error
 
-tests/test_primordial_f004_walk.py .                                     [100%]
-
-============================== 1 passed in 1.01s ===============================
+==================================== ERRORS ====================================
+_____________ ERROR collecting tests/test_primordial_f004_walk.py ______________
+ImportError while importing test module '/Users/tomriddle1/.openclaw/workspace/orchestration/fix/.work/seam_base_primordial-f004-walk_27166/tests/test_primordial_f004_walk.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/test_primordial_f004_walk.py:16: in <module>
+    from src.simulation_runner import run_single_simulation
+src/simulation_runner.py:4: in <module>
+    from . import n_body_simulation
+src/n_body_simulation.py:4: in <module>
+    from analytic_impulse import calculate_velocity_kick, G as analytic_G # Use G from analytic_impulse for consistency check
+E   ModuleNotFoundError: No module named 'analytic_impulse'
+=========================== short test summary info ============================
+ERROR tests/test_primordial_f004_walk.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+=============================== 1 error in 0.20s ===============================
 
