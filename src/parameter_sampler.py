@@ -1,14 +1,17 @@
 import numpy as np
 import scipy.stats as stats
 
+from .constants import KILOMETERS_PER_SECOND_TO_AU_PER_DAY
+
 # Define constants for parameter ranges or distributions (placeholders)
 DEFAULT_MASS_RANGE_MSUN = (1e-12, 1e-6) # Example: Log-uniform mass range in Solar masses
 DEFAULT_B_MAX_AU = 1000.0 # Example: Maximum impact parameter in AU
 DEFAULT_VELOCITY_DISPERSION_KM_S = 200.0 # Example: Velocity dispersion in km/s for sampling
 DEFAULT_TIME_RANGE_YEARS = (0.0, 100.0) # Example: Time range for encounter
 
-# Conversion factors
-kilometers_per_second_to_astro_units_per_day = 86400.0 / 1.496e8  # 1 AU = 1.496e8 km, 1 day = 86400 s
+# Conversion factors — derived from official sources (scipy.constants: IAU 2012
+# exact au, SI day) via src/constants.py, never hand-typed (see F017).
+kilometers_per_second_to_astro_units_per_day = KILOMETERS_PER_SECOND_TO_AU_PER_DAY
 
 def sample_pbh_mass(n_samples=1, log_min=np.log10(DEFAULT_MASS_RANGE_MSUN[0]), log_max=np.log10(DEFAULT_MASS_RANGE_MSUN[1])):
     """
