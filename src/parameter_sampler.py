@@ -8,7 +8,7 @@ DEFAULT_VELOCITY_DISPERSION_KM_S = 200.0 # Example: Velocity dispersion in km/s 
 DEFAULT_TIME_RANGE_YEARS = (0.0, 100.0) # Example: Time range for encounter
 
 # Conversion factors
-KM_S_TO_AU_DAY = 86400.0 / 1.496e8  # 1 AU = 1.496e8 km, 1 day = 86400 s
+kilometers_to_astro_units_per_day = 86400.0 / 1.496e8  # 1 AU = 1.496e8 km, 1 day = 86400 s
 
 def sample_pbh_mass(n_samples=1, log_min=np.log10(DEFAULT_MASS_RANGE_MSUN[0]), log_max=np.log10(DEFAULT_MASS_RANGE_MSUN[1])):
     """
@@ -62,9 +62,9 @@ def sample_velocity(n_samples=1, sigma_v_km_s=DEFAULT_VELOCITY_DISPERSION_KM_S):
     vz_km_s = np.random.normal(0, sigma_v_km_s, n_samples)
 
     # Convert to AU/day
-    vx_au_day = vx_km_s * KM_S_TO_AU_DAY
-    vy_au_day = vy_km_s * KM_S_TO_AU_DAY
-    vz_au_day = vz_km_s * KM_S_TO_AU_DAY
+    vx_au_day = vx_km_s * kilometers_to_astro_units_per_day
+    vy_au_day = vy_km_s * kilometers_to_astro_units_per_day
+    vz_au_day = vz_km_s * kilometers_to_astro_units_per_day
 
     return np.stack([vx_au_day, vy_au_day, vz_au_day], axis=-1)
 
