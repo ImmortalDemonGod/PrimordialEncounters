@@ -1,28 +1,45 @@
-# HARNESS-EXECUTED (#157) — new RED test(s) tests/test_primordial_f004_walk.py run in a throwaway worktree at origin/master
-# exit=2 (import-error (symbol absent at base?))
-============================= test session starts ==============================
-platform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0
-rootdir: /Users/tomriddle1/.openclaw/workspace/orchestration/fix/.work/seam_base_primordial-f004-walk_27166
-configfile: pytest.ini
-plugins: cov-7.1.0
-collected 0 items / 1 error
+# HARNESS-EXECUTED (#157/#192) — RED baseline via isolated-revert of src/simulation_runner.py at HEAD (keeps all other HEAD fixes): new test(s) tests/test_primordial_f004_walk.py
+# exit=1 (assertion failure)
+      # Convert to AU/day for runner input
+        from src.n_body_simulation import VELOCITY_DAY_TO_REBOUND
+        velocities_au_day = velocities_rebound / VELOCITY_DAY_TO_REBOUND
+    
+        t_start = 0.0
+        t_end = 0.1  # Short duration
+        dt = 0.001
+        integrator = 'leapfrog'
+    
+        # Generate PBH params from the sampler (produces 'mass_msun', 'impact_param_au', etc.)
+        pbh_params = generate_pbh_sample(1)[0]
+    
+        # This should NOT raise KeyError: 'mass' or KeyError: 'impact_param'
+        # The runner should accept the sampler's key names directly
+        args = (positions, velocities_au_day, masses, t_start, t_end, dt, integrator, pbh_params)
+        times, positions_out, velocities_out = run_single_simulation(args)
+    
+        # Assert the simulation completed (not failed with None returns)
+>       assert times is not None, "Simulation should complete without KeyError"
+E       AssertionError: Simulation should complete without KeyError
+E       assert None is not None
 
-==================================== ERRORS ====================================
-_____________ ERROR collecting tests/test_primordial_f004_walk.py ______________
-ImportError while importing test module '/Users/tomriddle1/.openclaw/workspace/orchestration/fix/.work/seam_base_primordial-f004-walk_27166/tests/test_primordial_f004_walk.py'.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/importlib/__init__.py:127: in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-tests/test_primordial_f004_walk.py:16: in <module>
-    from src.simulation_runner import run_single_simulation
-src/simulation_runner.py:4: in <module>
-    from . import n_body_simulation
-src/n_body_simulation.py:4: in <module>
-    from analytic_impulse import calculate_velocity_kick, G as analytic_G # Use G from analytic_impulse for consistency check
-E   ModuleNotFoundError: No module named 'analytic_impulse'
+tests/test_primordial_f004_walk.py:51: AssertionError
+----------------------------- Captured stdout call -----------------------------
+Warning: Timestep provided but integrator 'leapfrog' might not use a fixed dt.
+Initialized REBOUND simulation with leapfrog integrator (G=39.4784).
+Adding particle 'Sun' with mass 1.00e+00 M_sun...
+Particle 'Sun' added. Total particles: 1
+Adding particle 'body_1' with mass 1.00e-06 M_sun...
+Particle 'body_1' added. Total particles: 2
+Adding particle 'body_2' with mass 1.00e-05 M_sun...
+Particle 'body_2' added. Total particles: 3
+Running perturbed simulation (PBH params: {'mass_msun': np.float64(5.17125577102576e-11), 'impact_param_au': np.float64(271.70123948689866), 'velocity_au_day': array([  7.30194037, -17.93138148,   8.83664324]), 't_encounter_years': np.float64(7.474869309804788)})...
+Error during simulation run: 'mass'
+----------------------------- Captured stderr call -----------------------------
+Traceback (most recent call last):
+  File "/private/tmp/claude-501/-Users-tomriddle1--openclaw-workspace/b0b1875c-425b-4b6d-8556-111ee59684cd/scratchpad/f004WT/src/simulation_runner.py", line 84, in run_single_simulation
+    pbh_mass = pbh_params['mass']
+KeyError: 'mass'
 =========================== short test summary info ============================
-ERROR tests/test_primordial_f004_walk.py
-!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
-=============================== 1 error in 0.20s ===============================
+FAILED tests/test_primordial_f004_walk.py::test_run_single_simulation_pbh_key_aliasing
+============================== 1 failed in 1.36s ===============================
 
