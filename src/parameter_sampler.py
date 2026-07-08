@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.stats as stats
 
-from .constants import KILOMETERS_PER_SECOND_TO_AU_PER_DAY
+from .constants import KILOMETERS_PER_SECOND_TO_ASTRONOMICAL_UNITS_PER_DAY
 
 # Define constants for parameter ranges or distributions (placeholders)
 DEFAULT_MASS_RANGE_MSUN = (1e-12, 1e-6) # Example: Log-uniform mass range in Solar masses
@@ -11,7 +11,7 @@ DEFAULT_TIME_RANGE_YEARS = (0.0, 100.0) # Example: Time range for encounter
 
 # Conversion factors — derived from official sources (scipy.constants: IAU 2012
 # exact au, SI day) via src/constants.py, never hand-typed (see F017).
-kilometers_per_second_to_astro_units_per_day = KILOMETERS_PER_SECOND_TO_AU_PER_DAY
+kilometers_per_second_to_astronomical_units_per_day = KILOMETERS_PER_SECOND_TO_ASTRONOMICAL_UNITS_PER_DAY
 
 def sample_pbh_mass(n_samples=1, log_min=np.log10(DEFAULT_MASS_RANGE_MSUN[0]), log_max=np.log10(DEFAULT_MASS_RANGE_MSUN[1])):
     """
@@ -65,9 +65,9 @@ def sample_velocity(n_samples=1, sigma_v_km_s=DEFAULT_VELOCITY_DISPERSION_KM_S):
     vz_km_s = np.random.normal(0, sigma_v_km_s, n_samples)
 
     # Convert to AU/day
-    vx_au_day = vx_km_s * kilometers_per_second_to_astro_units_per_day
-    vy_au_day = vy_km_s * kilometers_per_second_to_astro_units_per_day
-    vz_au_day = vz_km_s * kilometers_per_second_to_astro_units_per_day
+    vx_au_day = vx_km_s * kilometers_per_second_to_astronomical_units_per_day
+    vy_au_day = vy_km_s * kilometers_per_second_to_astronomical_units_per_day
+    vz_au_day = vz_km_s * kilometers_per_second_to_astronomical_units_per_day
 
     return np.stack([vx_au_day, vy_au_day, vz_au_day], axis=-1)
 

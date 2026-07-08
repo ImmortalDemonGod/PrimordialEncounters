@@ -39,7 +39,7 @@ def test_days_per_julian_year_is_iau_exact():
 def test_derived_km_s_to_au_day_conversion_is_consistent():
     """constants: the km/s -> AU/day factor is derived, not typed, and ~5.7755e-4."""
     assert (
-        constants.KILOMETERS_PER_SECOND_TO_AU_PER_DAY
+        constants.KILOMETERS_PER_SECOND_TO_ASTRONOMICAL_UNITS_PER_DAY
         == constants.SECONDS_PER_DAY / constants.ASTRONOMICAL_UNIT_KM
     )
-    assert constants.KILOMETERS_PER_SECOND_TO_AU_PER_DAY == pytest.approx(5.7755e-4, rel=1e-3)
+    assert constants.KILOMETERS_PER_SECOND_TO_ASTRONOMICAL_UNITS_PER_DAY == pytest.approx(5.7755e-4, rel=1e-3)

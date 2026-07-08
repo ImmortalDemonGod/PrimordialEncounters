@@ -22,4 +22,4 @@ DAYS_PER_JULIAN_YEAR = _sc.Julian_year / _sc.day   # 365.25 — IAU Julian year
 
 # --- Derived unit conversions --------------------------------------------------
 # 1 km/s expressed in AU/day: (86 400 s/day) / (149 597 870.7 km/AU) ≈ 5.7755e-4
-KILOMETERS_PER_SECOND_TO_AU_PER_DAY = SECONDS_PER_DAY / ASTRONOMICAL_UNIT_KM
+KILOMETERS_PER_SECOND_TO_ASTRONOMICAL_UNITS_PER_DAY = SECONDS_PER_DAY / ASTRONOMICAL_UNIT_KM

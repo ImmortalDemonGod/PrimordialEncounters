@@ -2,7 +2,7 @@
 Tests for F017: the km/s -> AU/day conversion constant was wrong by a factor of ~86.
 
 The constant under test was named KM_S_TO_AU_DAY when the finding was filed; it is
-now `kilometers_per_second_to_astro_units_per_day` and is derived from official
+now `kilometers_per_second_to_astronomical_units_per_day` and is derived from official
 values in src/constants.py (scipy.constants: IAU 2012 exact astronomical unit),
 rather than hand-typed.
 
@@ -36,14 +36,14 @@ def test_conversion_constant_derives_from_official_sources():
     """parameter_sampler: km/s->AU/day constant equals the scipy.constants-derived
     value (IAU 2012 exact au) — a hand-typed approximation cannot satisfy this (F017)."""
     assert (
-        ps.kilometers_per_second_to_astro_units_per_day
-        == constants.KILOMETERS_PER_SECOND_TO_AU_PER_DAY
+        ps.kilometers_per_second_to_astronomical_units_per_day
+        == constants.KILOMETERS_PER_SECOND_TO_ASTRONOMICAL_UNITS_PER_DAY
     )
     expected = constants.SECONDS_PER_DAY / constants.ASTRONOMICAL_UNIT_KM
-    assert ps.kilometers_per_second_to_astro_units_per_day == pytest.approx(expected, rel=1e-12)
+    assert ps.kilometers_per_second_to_astronomical_units_per_day == pytest.approx(expected, rel=1e-12)
     # Magnitude sanity: ~5.78e-4. The pre-fix value (86400/1.731e6 ~= 0.0499, ~86x
     # too large) can never pass this.
-    assert ps.kilometers_per_second_to_astro_units_per_day == pytest.approx(5.7755e-4, rel=1e-3)
+    assert ps.kilometers_per_second_to_astronomical_units_per_day == pytest.approx(5.7755e-4, rel=1e-3)
 
 
 def test_sample_velocity_magnitude_matches_physical_expectation(seeded_global_rng):
@@ -57,7 +57,7 @@ def test_sample_velocity_magnitude_matches_physical_expectation(seeded_global_rn
 
     # Maxwell-Boltzmann mean speed = 2*sigma*sqrt(2/pi) ~= 319 km/s for sigma=200;
     # with the official conversion that is ~0.184 AU/day.
-    expected_mean = 2 * sigma_v * np.sqrt(2 / np.pi) * constants.KILOMETERS_PER_SECOND_TO_AU_PER_DAY
+    expected_mean = 2 * sigma_v * np.sqrt(2 / np.pi) * constants.KILOMETERS_PER_SECOND_TO_ASTRONOMICAL_UNITS_PER_DAY
     assert 0.1 <= expected_mean <= 0.25  # the window below encodes the same physics
 
     assert 0.1 <= np.mean(speeds_au_day) <= 0.25, (
@@ -71,7 +71,7 @@ def test_conversion_round_trip():
     """parameter_sampler: km/s -> AU/day -> km/s must return exactly 1, using the
     same official AU value in both directions."""
     au_day_to_km_s = constants.ASTRONOMICAL_UNIT_KM / constants.SECONDS_PER_DAY
-    round_trip = ps.kilometers_per_second_to_astro_units_per_day * au_day_to_km_s
+    round_trip = ps.kilometers_per_second_to_astronomical_units_per_day * au_day_to_km_s
     assert round_trip == pytest.approx(1.0, rel=1e-12)
 
 
