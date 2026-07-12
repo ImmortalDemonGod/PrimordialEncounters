@@ -88,12 +88,12 @@ def run_single_simulation(args):
             # This requires a more complex setup - assuming position is given directly for now
             # Placeholder: Use a dummy position far away initially
             # TODO: Calculate initial PBH position based on encounter parameters relative to target
-            pbh_initial_pos = np.array([-1000.0, pbh_params.get('impact_param_au', 100.0), 0.0]) # Needs proper calculation!
+            pbh_initial_position_au = np.array([-1000.0, pbh_params.get('impact_param_au', 100.0), 0.0]) # Needs proper calculation!
             pbh_label = "PBH_Perturber"
 
             sim_instance.add_pbh(
                 mass=pbh_mass,
-                position=pbh_initial_pos, # Placeholder position
+                position=pbh_initial_position_au, # Placeholder position
                 velocity=pbh_velocity_rebound,
                 label=pbh_label
             )
