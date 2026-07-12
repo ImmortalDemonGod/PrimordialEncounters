@@ -91,7 +91,7 @@ class NBodySimulation:
                  # Attempt to get name from REBOUND's hash/name
                  try:
                      name = str(p.name) if p.name else f"particle_{p.index}"
-                 except:
+                 except Exception:
                      name = f"particle_{p.index}"
                  self._particle_labels.append(name)
             print(f"Successfully added {self.sim.N} particles (Sun and planets). Current time: {self.get_simulation_time():.4f} years.")
@@ -168,6 +168,26 @@ class NBodySimulation:
         else:
              print(f"Integration finished precisely at t={final_time_years:.4f} years.")
 
+    def _label_of(self, index):
+        """
+        Resolves the label for particle `index` from the parallel `_particle_labels` list.
+
+        REBOUND particles carry no label attribute (rebound 5.x rejects an `add(label=)`
+        kwarg), so `_particle_labels` is the only source of truth and MUST stay
+        index-aligned with `sim.particles`: every `self.sim.add(...)` must be paired
+        with a `_particle_labels` append. This guard warns loudly on desynchronization
+        instead of silently mislabeling particles (review finding on PR #21 / issue #52).
+        """
+        if len(self._particle_labels) != self.sim.N:
+            if not getattr(self, "_label_desync_warned", False):
+                print(f"Warning: particle label list out of sync ({len(self._particle_labels)} labels "
+                      f"for {self.sim.N} particles) — labels may be wrong. Every sim.add() must be "
+                      f"paired with a _particle_labels append.")
+                self._label_desync_warned = True
+        else:
+            self._label_desync_warned = False
+        return self._particle_labels[index] if index < len(self._particle_labels) else f"particle_{index}"
+
     def get_particle_state(self, label):
          """
          Gets the state vector (position, velocity) for a particle by its label.
@@ -180,8 +200,7 @@ class NBodySimulation:
                     or (None, None) if the particle is not found.
          """
          for i, p in enumerate(self.sim.particles):
-             particle_label = self._particle_labels[i] if i < len(self._particle_labels) else f"particle_{i}"
-             if particle_label == label:
+             if self._label_of(i) == label:
                  pos = np.array([p.x, p.y, p.z])
                  vel = np.array([p.vx, p.vy, p.vz])
                  return pos, vel
@@ -214,8 +233,7 @@ class NBodySimulation:
         body_pos, body_vel = self.get_particle_state(target_body_label)
         pbh_mass = None
         for i, p in enumerate(self.sim.particles):
-             particle_label = self._particle_labels[i] if i < len(self._particle_labels) else f"particle_{i}"
-             if particle_label == pbh_label:
+             if self._label_of(i) == pbh_label:
                  pbh_mass = p.m
                  break
 
@@ -305,10 +323,8 @@ class NBodySimulation:
         """
         particles_data = []
         for i, p in enumerate(self.sim.particles):
-            # Ensure label exists
-            label = getattr(p, 'label', f'particle_{i}') # type: ignore # Known dynamic attribute issue
-            if not label: # Handle empty string labels if they occur
-                 label = f'particle_{i}'
+            # REBOUND particles have no label attribute; resolve from the tracked list
+            label = self._label_of(i)
             data = {
                 'index': i,
                 'label': label,
