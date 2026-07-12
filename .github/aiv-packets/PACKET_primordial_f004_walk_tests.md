@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Repository** | github.com/ImmortalDemonGod/aiv-protocol |
+| **Repository** | github.com/ImmortalDemonGod/PrimordialEncounters |
 | **Change ID** | primordial-f004-walk-tests |
 | **Commits** | `659fd42`, `05d54d8`, `546fe62` |
 | **Head SHA** | `546fe62` |
