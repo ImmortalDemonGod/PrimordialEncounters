@@ -21,7 +21,7 @@ def run_single_simulation(args):
             dt_years (float): Time step in years (used for integrator if needed).
             integrator (str): Integrator type ('leapfrog', 'ias15', etc.).
             pbh_params (dict or None): Dictionary of PBH parameters
-                                       (mass, velocity_au_day, impact_param, t_encounter_years)
+                                       (mass_msun, velocity_au_day, impact_param_au, t_encounter_years)
                                        or None for baseline simulation.
                                        'velocity_au_day' is in AU/day.
                                        't_encounter_years' is the absolute time of encounter in years.
@@ -200,8 +200,8 @@ def run_parallel_simulations(initial_positions, initial_velocities_au_day, masse
         integrator (str): Integrator type. Defaults to 'leapfrog'.
         pbh_params (dict or None): Dictionary of PBH parameters for the
                                    perturbed run. If None, only baseline runs.
-                                   Expected keys: 'mass', 'velocity_au_day',
-                                   'impact_param', 't_encounter_years'.
+                                   Expected keys: 'mass_msun', 'velocity_au_day',
+                                   'impact_param_au', 't_encounter_years'.
 
     Returns:
         tuple: Contains results for baseline and perturbed simulations:
@@ -267,9 +267,9 @@ if __name__ == '__main__':
 
     # Example PBH parameters
     dummy_pbh_params = {
-        'mass': 1e-9, # M_sun
+        'mass_msun': 1e-9, # M_sun
         'velocity_au_day': np.array([20, 0, 0]), # AU/day - High velocity encounter
-        'impact_param': 0.5, # AU - Closest approach distance if undeflected
+        'impact_param_au': 0.5, # AU - Closest approach distance if undeflected
         't_encounter_years': 0.05 # Encounter time within the simulation duration
         # Note: Initial PBH position calculation based on these is complex and omitted here.
         # The current code uses a placeholder position and applies kick based on initial state.
